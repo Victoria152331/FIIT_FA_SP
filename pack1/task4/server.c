@@ -26,7 +26,7 @@ struct cur_situation {
 };
 
 typedef enum Result {
-    OK, WOLF_ATE_GOAT, GOAT_ATE_CABBAGE, CANNOT_TAKE, CANNOT_PUT, INVALID_PTR, INVALID_COMMAND
+    OK, WOLF_ATE_GOAT, GOAT_ATE_CABBAGE, CANNOT_TAKE, CANNOT_PUT, INVALID_PTR, INVALID_COMMAND, SUCCESS
 } Result;
 
 Result take_item(struct cur_situation* situation, Item item) {
@@ -85,6 +85,13 @@ Result check(struct cur_situation* situation) {
             return GOAT_ATE_CABBAGE;
         }
     }
+
+    if ((situation->loc[GOAT] == RIGHT) &&
+        (situation->loc[WOLF] == RIGHT) &&
+        (situation->loc[CABBAGE] == RIGHT)) {
+            return SUCCESS;
+        }
+
     return OK;
 }
 
@@ -101,27 +108,59 @@ Result init_situation(struct cur_situation* situation) {
 }
 
 Result process_command(struct cur_situation* situation, char* command) {
+    Result res_command, res_check;
     if(!strcmp(command, "take goat")) {
-        return take_item(situation, GOAT);
+        res_command = take_item(situation, GOAT);
     } else if (!strcmp(command, "take wolf")) {
-        return take_item(situation, WOLF);
+        res_command = take_item(situation, WOLF);
     } else if (!strcmp(command, "take cabbage")) {
-        return take_item(situation, CABBAGE);
+        res_command = take_item(situation, CABBAGE);
     } else if (!strcmp(command, "put")) {
-        return put_item(situation);
+        res_command = put_item(situation);
     } else if (!strcmp(command, "move")) {
-        return move(situation);
+        res_command = move(situation);
     } else {
-        return INVALID_COMMAND;
+        res_command = INVALID_COMMAND;
+    }
+    if (res_command != OK) {
+        return res_command;
+    } else {
+        res_check = check(situation);
+        return res_check;
+    }
+
+}
+
+void sit_to_str(struct cur_situation* sit, char* text) {
+    strcpy(text, "     ________     ");
+    if (sit->loc[WOLF] == LEFT) {
+        text[1] = 'W';
+    } else {
+        text[15] = 'W';
+    }
+    if (sit->loc[GOAT] == LEFT) {
+        text[2] = 'G';
+    } else {
+        text[16] = 'G';
+    }
+    if (sit->loc[WOLF] == LEFT) {
+        text[3] = 'C';
+    } else {
+        text[17] = 'C';
+    }
+    if (sit->loc[EMPTY] == LEFT) {
+        text[7] = 'B';
+    } else {
+        text[12] = 'B';
     }
 }
 
-int send_answer(int msgid, long client_pid, Result res) {
+int send_answer(int msgid, long client_pid, Result res, struct cur_situation* sit) {
     struct message msg;
     msg.msg_type = client_pid + 1;
     switch (res) {
     case OK:
-        strcpy(msg.msg_text, "accepted");
+        sit_to_str(sit, msg.msg_text);
         break;
     case WOLF_ATE_GOAT:
         strcpy(msg.msg_text, "wolf ate goat");
@@ -138,10 +177,16 @@ int send_answer(int msgid, long client_pid, Result res) {
     case INVALID_COMMAND:
         strcpy(msg.msg_text, "invalid command");
         break;
+    case INVALID_PTR:
+        strcpy(msg.msg_text, "server error");
+        break;
+    case SUCCESS:
+        strcpy(msg.msg_text, "all is transported");
+        break;
     default:
         break;
     }
-    return msgsnd(msgid, &msg, strlen(msg.msg_text), 0);
+    return msgsnd(msgid, &msg, strlen(msg.msg_text) + 1, 0);
 }
 
 int main() {
@@ -172,7 +217,7 @@ int main() {
         msgrcv(msgid, &msg, sizeof(msg), 0, 0);
 
         if (msg.msg_type & 1 == 1) { //it is server message
-            msgsnd(msgid, &msg, strlen(msg.msg_text), 0); //send back
+            msgsnd(msgid, &msg, strlen(msg.msg_text) + 1, 0); //send back
             continue;
         }
 
@@ -231,10 +276,9 @@ int main() {
 
         if (res == INVALID_PTR) {
             init_situation(&(sit_buf[i]));
-            continue;
         }
 
-        send_answer(msgid, cur_client_pid, res);
+        send_answer(msgid, cur_client_pid, res, &sit_buf[i]);
     }
 
     msgctl(msgid, IPC_RMID, NULL);
