@@ -30,6 +30,11 @@ int main(int argc, char* argv[]) {
     key_t key = ftok("queue", 1234);
     int msgid = msgget(key, 0666);
 
+    if (msgid == -1) {
+        printf("fail to open msg queue\n");
+        return 1;
+    }
+
     struct message msg_send, msg_recieve;
 
     pid_t pid = getpid();
@@ -37,21 +42,35 @@ int main(int argc, char* argv[]) {
     strcpy(msg_send.msg_text, "new");
     msgsnd(msgid, &msg_send, 4, 0);
 
-    int rcvtype = pid << 1 + 1;
+    int rcvtype = (pid << 1) + 1;
+
+    char item[10];
 
     fscanf(commands, "%s", msg_send.msg_text);
+    if (!strcmp(msg_send.msg_text, "take")) {
+        fscanf(commands, "%s", item);
+        strcat(msg_send.msg_text, " ");
+        strcat(msg_send.msg_text, item);
+    }
 
     while (strcmp(msg_send.msg_text, "end")) {
-        msgsnd(msgid, &msg_send, strlen(msg_send.msg_type) + 1, 0);
+        msgsnd(msgid, &msg_send, strlen(msg_send.msg_text) + 1, 0);
         msgrcv(msgid, &msg_recieve, MSG_SIZE, rcvtype, 0);
-        printf("%s\n", msg_recieve.msg_text);
-        if (msg_recieve.msg_text[0] != ' ') {
-            fclose(commands);
-            return 0;
+        
+        if (msg_recieve.msg_text[0] == '1') {
+            printf("%s\n", &msg_recieve.msg_text[1]);
+            break;
         }
+        printf("%s\n", msg_recieve.msg_text);
         fscanf(commands, "%s", msg_send.msg_text);
+        if (!strcmp(msg_send.msg_text, "take")) {
+            fscanf(commands, "%s", item);
+            strcat(msg_send.msg_text, " ");
+            strcat(msg_send.msg_text, item);
+        }
     }
-    msgsnd(msgid, &msg_send, strlen(msg_send.msg_type) + 1, 0);
+    strcpy(msg_send.msg_text, "end");
+    msgsnd(msgid, &msg_send, strlen(msg_send.msg_text) + 1, 0);
     fclose(commands);
     return 0;
 }

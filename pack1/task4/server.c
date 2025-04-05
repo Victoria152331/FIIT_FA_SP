@@ -122,6 +122,7 @@ Result process_command(struct cur_situation* situation, char* command) {
     } else {
         res_command = INVALID_COMMAND;
     }
+
     if (res_command != OK) {
         return res_command;
     } else {
@@ -133,25 +134,45 @@ Result process_command(struct cur_situation* situation, char* command) {
 
 void sit_to_str(struct cur_situation* sit, char* text) {
     strcpy(text, "     ________     ");
-    if (sit->loc[WOLF] == LEFT) {
-        text[1] = 'W';
-    } else {
-        text[15] = 'W';
+    if (sit->in_boat != WOLF) {
+        if (sit->loc[WOLF] == LEFT) {
+            text[1] = 'W';
+        } else {
+            text[15] = 'W';
+        }
     }
-    if (sit->loc[GOAT] == LEFT) {
-        text[2] = 'G';
-    } else {
-        text[16] = 'G';
+    if (sit->in_boat != GOAT) {
+        if (sit->loc[GOAT] == LEFT) {
+            text[2] = 'G';
+        } else {
+            text[16] = 'G';
+        }
     }
-    if (sit->loc[WOLF] == LEFT) {
-        text[3] = 'C';
-    } else {
-        text[17] = 'C';
+    if (sit->in_boat != CABBAGE) {
+        if (sit->loc[CABBAGE] == LEFT) {
+            text[3] = 'C';
+        } else {
+            text[17] = 'C';
+        }
     }
     if (sit->loc[EMPTY] == LEFT) {
-        text[7] = 'B';
+        if(sit->in_boat == WOLF) {
+            text[7] = 'W';
+        } else if (sit->in_boat == CABBAGE) {
+            text[7] = 'C';
+        } else if (sit->in_boat == GOAT) {
+            text[7] = 'G';
+        }
+        text[6] = 'B';
     } else {
-        text[12] = 'B';
+        if(sit->in_boat == WOLF) {
+            text[10] = 'W';
+        } else if (sit->in_boat == CABBAGE) {
+            text[10] = 'C';
+        } else if (sit->in_boat == GOAT) {
+            text[10] = 'G';
+        }
+        text[11] = 'B';
     }
 }
 
@@ -163,10 +184,10 @@ int send_answer(int msgid, long client_pid, Result res, struct cur_situation* si
         sit_to_str(sit, msg.msg_text);
         break;
     case WOLF_ATE_GOAT:
-        strcpy(msg.msg_text, "wolf ate goat");
+        strcpy(msg.msg_text, "1wolf ate goat");
         break;
     case GOAT_ATE_CABBAGE:
-        strcpy(msg.msg_text, "goat ate cabbage");
+        strcpy(msg.msg_text, "1goat ate cabbage");
         break;
     case CANNOT_PUT:
         strcpy(msg.msg_text, "cannot put");
@@ -181,7 +202,7 @@ int send_answer(int msgid, long client_pid, Result res, struct cur_situation* si
         strcpy(msg.msg_text, "server error");
         break;
     case SUCCESS:
-        strcpy(msg.msg_text, "all is transported");
+        strcpy(msg.msg_text, "1all is transported");
         break;
     default:
         break;
@@ -191,7 +212,7 @@ int send_answer(int msgid, long client_pid, Result res, struct cur_situation* si
 
 int main() {
     key_t key = ftok("queue", 1234);
-    int msgid = msgget(key, 0666 | IPC_CREAT|IPC_EXCL);
+    int msgid = msgget(key, 0666 | IPC_CREAT |IPC_EXCL);
     if (msgid == -1) {
         return 1;
     }
@@ -214,12 +235,16 @@ int main() {
     }
 
     while (1) {
+        printf("wait...\n");
         msgrcv(msgid, &msg, sizeof(msg), 0, 0);
+        
 
         if (msg.msg_type & 1 == 1) { //it is server message
             msgsnd(msgid, &msg, strlen(msg.msg_text) + 1, 0); //send back
             continue;
         }
+
+        printf("recieve: %s\n", msg.msg_text);
 
         cur_client_pid = msg.msg_type;
 
@@ -227,7 +252,7 @@ int main() {
             continue;
         }
 
-        if (!strcmp(msg.msg_text, "kill")) {
+        if (msg.msg_type == 4) {
             break;
         }
 
@@ -252,6 +277,7 @@ int main() {
             busy_buf[i] = 1;
             pid_buf[i] = cur_client_pid;
             init_situation(&(sit_buf[i]));
+            continue;
         } else if (!strcmp(msg.msg_text, "end")) {
             i = 0;
             while ((pid_buf[i] != cur_client_pid) && (i < buf_len)) {
@@ -278,8 +304,12 @@ int main() {
             init_situation(&(sit_buf[i]));
         }
 
-        send_answer(msgid, cur_client_pid, res, &sit_buf[i]);
+        if(send_answer(msgid, cur_client_pid, res, &sit_buf[i]) == -1) {
+            printf("fail to send\n");
+        }
     }
 
     msgctl(msgid, IPC_RMID, NULL);
+    printf("server off\n");
+    return 0;
 }
