@@ -167,15 +167,28 @@ public:
 };
 
 template<class alloc>
-big_int::big_int(const std::vector<unsigned int, alloc> &digits, bool sign, pp_allocator<unsigned int> allocator)
-{
-    throw not_implemented("template<class alloc> big_int::big_int(const std::vector<unsigned int, alloc> &digits, bool sign, pp_allocator<unsigned int> allocator)", "your code should be here...");
-}
+big_int::big_int(const std::vector<unsigned int, alloc> &digits, bool sign, pp_allocator<unsigned int> allocator) :
+            _sign(sign), _digits(digits.begin(), digits.end(), allocator) {}
 
 template<std::integral Num>
-big_int::big_int(Num d, pp_allocator<unsigned int>)
+big_int::big_int(Num d, pp_allocator<unsigned int> allocator)
 {
-    throw not_implemented("template<std::integral Num>big_int::big_int(Num, pp_allocator<unsigned int>)", "your code should be here...");
+    if (d < 0) {
+        _sign = 0;
+        d = -d;
+    } else {
+        _sign = 1;
+    }
+    if (sizeof(Num) <= sizeof(unsigned int)) {
+        _digits = std::vector<unsigned int, pp_allocator<unsigned int>> (1, (unsigned int)d, allocator);
+    } else {
+        std::size_t n = sizeof(Num) / sizeof(unsigned int);
+        _digits = std::vector<unsigned int, pp_allocator<unsigned int>> (n, allocator);
+        for (std::size_t i = 0; i < n; ++i) {
+            _digits[i] = d & ((1 << (sizeof(unsigned int) * 8)) - 1);
+            d = d >> (sizeof(unsigned int) * 8);
+        }
+    }
 }
 
 big_int operator""_bi(unsigned long long n);

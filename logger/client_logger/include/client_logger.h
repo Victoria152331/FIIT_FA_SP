@@ -17,9 +17,9 @@ private:
 
     class refcounted_stream final
     {
-        static std::unordered_map<std::string, std::pair<size_t, std::ofstream>> _global_streams;
+        static std::unordered_map<std::string, std::pair<size_t, std::ofstream>> _global_streams; // путь к файлу, счетчик открытий, файл
 
-        std::pair<std::string, std::ofstream*> _stream;
+        std::pair<std::string, std::ofstream*> _stream; 
         friend client_logger;
         friend client_logger_builder;
     public:
