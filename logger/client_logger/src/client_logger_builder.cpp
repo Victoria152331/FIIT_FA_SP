@@ -22,7 +22,14 @@ logger_builder& client_logger_builder::add_file_stream(
         _output_streams.emplace(severity, std::make_pair(std::forward_list<client_logger::refcounted_stream>(), 0));
         it = _output_streams.find(severity);
     }
-    it->second.first.emplace_front(path);
+    auto& streams = it->second.first;
+    for (const auto& stream : streams) {
+        if (stream._stream.first == path) {
+            return *this;
+        }
+    }
+    
+    streams.emplace_front(new_stream);
     return *this;
 }
 
