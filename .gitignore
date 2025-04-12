@@ -40,3 +40,5 @@ cmake-build-*
 cmake-build-debug/
 
 build
+.vscode
+.vscode/settings.json

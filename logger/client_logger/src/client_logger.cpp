@@ -4,7 +4,6 @@
 #include <utility>
 #include "../include/client_logger.h"
 #include <not_implemented.h>
-#include <ctime>
 #include <iomanip>
 
 std::unordered_map<std::string, std::pair<size_t, std::ofstream>> client_logger::refcounted_stream::_global_streams;
@@ -15,8 +14,15 @@ logger& client_logger::log(
     logger::severity severity) &
 {
     std::string output_string = make_format(text, severity);
-    for (client_logger::refcounted_stream s : _output_streams[severity].first) {
-        *s._stream.second << output_string;
+    auto it = _output_streams.find(severity);
+    if (it == _output_streams.end()) {
+        return *this;
+    }
+    if (it->second.second == true) {
+        std::cout << output_string << std::endl;
+    }
+    for (client_logger::refcounted_stream& s : it->second.first) {
+        *(s._stream.second) << output_string << std::endl;
     }
     return *this; 
 }
@@ -25,9 +31,6 @@ std::string client_logger::make_format(const std::string &message, severity sev)
 {
     std::stringstream res;
     size_t pos = 0,  prev_pos = 0;
-    time_t rawtime;
-    time(&rawtime);
-    struct tm* ptm = gmtime(&rawtime);
     while (1) {
         while ((_format[pos] != 0) && (_format[pos] != '%')) {
             pos++;
@@ -41,11 +44,10 @@ std::string client_logger::make_format(const std::string &message, severity sev)
         switch (char_to_flag(_format[pos]))
         {
         case client_logger::flag::DATE:
-            res << ptm->tm_mday << "." << ptm->tm_mon + 1 << "." << std::setfill('0') << std::setw(2);
-            res << ptm->tm_year + 1900;
+            res << current_date_to_string();
             break;
         case client_logger::flag::TIME:
-            res << ptm->tm_hour << ":" << ptm->tm_min << ":" << ptm->tm_sec << std::setfill('0') << std::setw(2);
+            res << current_time_to_string();
             break;
         case client_logger::flag::SEVERITY:
             res << severity_to_string(sev);
@@ -58,6 +60,7 @@ std::string client_logger::make_format(const std::string &message, severity sev)
             break;
         }
         pos++;
+        prev_pos = pos;
     }
     return res.str();
 }
@@ -66,6 +69,7 @@ client_logger::client_logger(
         const std::unordered_map<logger::severity, std::pair<std::forward_list<refcounted_stream>, bool>> &streams,
         std::string format)
 {
+    
     _output_streams = streams;
     _format = format;
 }
@@ -97,8 +101,14 @@ client_logger::refcounted_stream::refcounted_stream(const std::string &path)
 {
     _stream.first = path;
     if (_global_streams.find(path) == _global_streams.end()) {
-        _global_streams[path] = std::make_pair((size_t)1, (std::ofstream) 0);
-        _global_streams[path].second.open(path);
+        std::ofstream s(path, std::ios::app);
+        if (!s.is_open()) {
+            _stream.first = "";
+            std::cout << "fail to open " << path << std::endl;
+            return;
+        }
+        _global_streams.emplace(path, std::make_pair(static_cast<size_t>(1), std::move(s)));
+
         _stream.second = &(_global_streams[path].second);
     } else {
         _global_streams[path].first ++;
@@ -108,6 +118,7 @@ client_logger::refcounted_stream::refcounted_stream(const std::string &path)
 
 client_logger::refcounted_stream::refcounted_stream(const client_logger::refcounted_stream &oth)
 {
+    
     _stream.first = oth._stream.first;
     _global_streams[_stream.first].first ++;
     _stream.second = oth._stream.second;
@@ -131,6 +142,8 @@ client_logger::refcounted_stream::refcounted_stream(client_logger::refcounted_st
 {
     _stream.first = oth._stream.first;
     _stream.second = oth._stream.second;
+    oth._stream.first = "";
+    oth._stream.second = NULL;
 }
 
 client_logger::refcounted_stream &client_logger::refcounted_stream::operator=(client_logger::refcounted_stream &&oth) noexcept
@@ -142,11 +155,16 @@ client_logger::refcounted_stream &client_logger::refcounted_stream::operator=(cl
     }
     _stream.first = oth._stream.first;
     _stream.second = oth._stream.second;
+    oth._stream.first = "";
+    oth._stream.second = NULL;
     return *this;
 }
 
 client_logger::refcounted_stream::~refcounted_stream()
 {
+    if (_stream.first == "") {
+        return;
+    }
     _global_streams[_stream.first].first --;
     if (_global_streams[_stream.first].first == 0) {
         _global_streams[_stream.first].second.close();
