@@ -104,7 +104,7 @@ client_logger::refcounted_stream::refcounted_stream(const std::string &path)
         std::ofstream s(path, std::ios::app);
         if (!s.is_open()) {
             _stream.first = "";
-            std::cout << "fail to open " << path << std::endl;
+            std::cerr << "fail to open " << path << std::endl;
             return;
         }
         _global_streams.emplace(path, std::make_pair(static_cast<size_t>(1), std::move(s)));

@@ -28,7 +28,7 @@ logger_builder& client_logger_builder::add_file_stream(
             return *this;
         }
     }
-    
+
     streams.emplace_front(new_stream);
     return *this;
 }
@@ -50,7 +50,7 @@ logger_builder& client_logger_builder::transform_with_configuration(
 {
     std::ifstream config_file(configuration_file_path);
     if (!config_file.is_open()) {
-        std::cout << "fail to open config " << configuration_file_path << std::endl;
+        std::cerr << "fail to open config " << configuration_file_path << std::endl;
         return *this;
     }
 
