@@ -79,6 +79,12 @@
         "complex": "cpp",
         "regex": "cpp",
         "stdfloat": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "buffer": "cpp",
+        "executor": "cpp",
+        "io_context": "cpp",
+        "netfwd": "cpp",
+        "socket": "cpp",
+        "future": "cpp"
     }
 }

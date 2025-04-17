@@ -16,7 +16,10 @@ class server_logger final:
 
     friend server_logger_builder;
 
+    int _socket_fd;
+
     static int inner_getpid();
+    static void send_to_server(const int& socket_fd, const std::string& message);
 public:
 
     server_logger(server_logger const &other);

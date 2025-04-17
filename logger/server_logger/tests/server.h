@@ -8,7 +8,7 @@
 //#include <crow.h>
 #include <unordered_map>
 #include <logger.h>
-//#include <mutex>
+#include <mutex>
 #include <shared_mutex>
 
 class server
@@ -19,9 +19,11 @@ class server
 
     std::shared_mutex _mut;
 
+
 public:
 
     explicit server(uint16_t port = 9200);
+    void handle_client(int client_fd);
 
     server(const server&) = delete;
     server& operator=(const server&) = delete;
