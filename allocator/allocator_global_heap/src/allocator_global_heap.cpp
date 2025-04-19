@@ -2,13 +2,13 @@
 #include "../include/allocator_global_heap.h"
 
 allocator_global_heap::allocator_global_heap(
-    logger *logger)
+    logger *logger) : _logger(logger)
 {
 
     if (_logger)
         _logger->trace("allocator_global_heap::allocator_global_heap - begin");
 
-    _logger = logger;
+    // _logger = nullptr;
 
     if (_logger)
         _logger->trace("allocator_global_heap::allocator_global_heap - end");
@@ -20,8 +20,18 @@ allocator_global_heap::allocator_global_heap(
     if (_logger)
         _logger->debug("allocator_global_heap::do_allocate_sm - begin");
 
+    if (size == 0) {
+        if (_logger)
+            _logger->debug("allocator_global_heap::do_allocate_sm - end with size 0");
+        return nullptr;
+    }
     try {
-        void *ptr = ::operator new(size);
+        void *ptr = ::operator new(size + size_t_size);
+
+        size_t* meta = static_cast<size_t*>(ptr);
+        *meta = size;
+        ptr = static_cast<void*>(static_cast<char*>(ptr) + size_t_size);
+        
         if (_logger)
             _logger->debug("allocator_global_heap::do_allocate_sm - end");
         return ptr;
@@ -39,6 +49,11 @@ void allocator_global_heap::do_deallocate_sm(
     if (_logger)
         _logger->debug("allocator_global_heap::do_deallocate_sm - begin");
 
+    if (at == nullptr) {
+        _logger->debug("allocator_global_heap::do_deallocate_sm - end with nullptr");
+        return;
+    }
+    at = static_cast<void*>(static_cast<char*>(at) - size_t_size);
     ::operator delete(at);
 
     if (_logger)
@@ -116,7 +131,7 @@ allocator_global_heap::allocator_global_heap(allocator_global_heap &&other) noex
 
 allocator_global_heap &allocator_global_heap::operator=(allocator_global_heap &&other) noexcept
 {
-    if (_logger)
+    if (_logger){}
         _logger->trace("allocator_global_heap::move_assign - begin");
 
     if (this != &other) {
