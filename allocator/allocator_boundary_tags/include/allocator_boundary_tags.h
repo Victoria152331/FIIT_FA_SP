@@ -31,6 +31,15 @@ private:
 
     void *_trusted_memory;
 
+    struct global_metadata {
+        ::logger* logger;
+        memory_resource* parent_allocator;
+        size_t space_size;
+        allocator_with_fit_mode::fit_mode fit_mode;
+        std::mutex mutex;
+        void* first_block;
+    };
+
 public:
     
     ~allocator_boundary_tags() override;

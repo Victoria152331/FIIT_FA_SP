@@ -3,7 +3,8 @@
 
 allocator_boundary_tags::~allocator_boundary_tags()
 {
-    throw not_implemented("allocator_boundary_tags::~allocator_boundary_tags()", "your code should be here...");
+    allocator_boundary_tags::global_metadata* meta = reinterpret_cast<allocator_boundary_tags::global_metadata*>(_trusted_memory);
+    meta->parent_allocator->deallocate(_trusted_memory, meta->space_size);
 }
 
 allocator_boundary_tags::allocator_boundary_tags(
@@ -27,7 +28,26 @@ allocator_boundary_tags::allocator_boundary_tags(
         logger *logger,
         allocator_with_fit_mode::fit_mode allocate_fit_mode)
 {
-    throw not_implemented("allocator_boundary_tags::allocator_boundary_tags(size_t,std::pmr::memory_resource *,logger *,allocator_with_fit_mode::fit_mode)", "your code should be here...");
+    try {
+        if (parent_allocator == nullptr) {
+            _trusted_memory = std::pmr::get_default_resource()->allocate(space_size);
+        } else {
+            _trusted_memory = parent_allocator->allocate(space_size);
+        }
+    }
+    catch (const std::bad_alloc &) {
+        if (logger)
+            logger->error("allocator_boundary_tags::allocator_boundary_tags - std::bad_alloc thrown");
+        throw;
+    }
+
+    allocator_boundary_tags::global_metadata* meta = reinterpret_cast<allocator_boundary_tags::global_metadata*>(_trusted_memory);
+    meta->logger = logger;
+    meta->fit_mode = allocate_fit_mode;
+    meta->parent_allocator = parent_allocator;
+    meta->space_size = space_size;
+    new(&(meta->mutex)) std::mutex;
+    meta->first_block = reinterpret_cast<void*>(reinterpret_cast<char*>(_trusted_memory) + allocator_metadata_size);
 }
 
 [[nodiscard]] void *allocator_boundary_tags::do_allocate_sm(
@@ -45,7 +65,8 @@ void allocator_boundary_tags::do_deallocate_sm(
 inline void allocator_boundary_tags::set_fit_mode(
     allocator_with_fit_mode::fit_mode mode)
 {
-    throw not_implemented("inline void allocator_boundary_tags::set_fit_mode(allocator_with_fit_mode::fit_mode)", "your code should be here...");
+    allocator_boundary_tags::global_metadata* meta = reinterpret_cast<allocator_boundary_tags::global_metadata*>(_trusted_memory);
+    meta->fit_mode = mode;
 }
 
 
