@@ -326,7 +326,7 @@ inline logger *allocator_boundary_tags::get_logger() const
 
 inline std::string allocator_boundary_tags::get_typename() const noexcept
 {
-    throw not_implemented("inline std::string allocator_boundary_tags::get_typename() const noexcept", "your code should be here...");
+    return "allocator_boundary_tags";
 }
 
 
@@ -372,5 +372,10 @@ std::vector<allocator_test_utils::block_info> allocator_boundary_tags::get_block
 
 bool allocator_boundary_tags::do_is_equal(const std::pmr::memory_resource &other) const noexcept
 {
-    return dynamic_cast<const allocator_boundary_tags*>(&other)->_trusted_memory == _trusted_memory;
+    if (dynamic_cast<const allocator_boundary_tags*>(&other)->get_typename() == "allocator_boundary_tags") {
+        return dynamic_cast<const allocator_boundary_tags*>(&other)->_trusted_memory == _trusted_memory;
+    } else {
+        return false;
+    }
+    
 }

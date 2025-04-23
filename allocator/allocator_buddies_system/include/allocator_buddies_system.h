@@ -8,6 +8,7 @@
 #include <typename_holder.h>
 #include <mutex>
 #include <cmath>
+#include <sstream>
 
 namespace __detail
 {
@@ -53,8 +54,15 @@ private:
     /**
      * TODO: You must improve it for alignment support
      */
+    struct global_metadata {
+        std::mutex mutex;
+        ::logger* logger;
+        memory_resource* parent_allocator;
+        unsigned char size;
+        allocator_with_fit_mode::fit_mode fit_mode;
+    };
 
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(allocator_dbg_helper*) + sizeof(fit_mode) + sizeof(unsigned char) + sizeof(std::mutex);
+    static constexpr const size_t allocator_metadata_size = sizeof(global_metadata);
 
     static constexpr const size_t occupied_block_metadata_size = sizeof(block_metadata) + sizeof(void*);
 
@@ -71,10 +79,10 @@ public:
             allocator_with_fit_mode::fit_mode allocate_fit_mode = allocator_with_fit_mode::fit_mode::first_fit);
 
     allocator_buddies_system(
-        allocator_buddies_system const &other);
+        allocator_buddies_system const &other) = delete;
     
     allocator_buddies_system &operator=(
-        allocator_buddies_system const &other);
+        allocator_buddies_system const &other) = delete;
     
     allocator_buddies_system(
         allocator_buddies_system &&other) noexcept;
@@ -99,8 +107,11 @@ public:
 
 
     std::vector<allocator_test_utils::block_info> get_blocks_info() const noexcept override;
+    std::pair<std::string, size_t> format_blocks_info();
 
 private:
+
+    void* place_block(unsigned char size, block_metadata* cur_block);
 
     
     inline logger *get_logger() const override;
