@@ -8,6 +8,7 @@
 #include <typename_holder.h>
 #include <iterator>
 #include <mutex>
+#include <sstream>
 
 class allocator_boundary_tags final :
     public smart_mem_resource,
@@ -22,31 +23,44 @@ private:
     /**
      * TODO: You must improve it for alignment support
      */
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(memory_resource*) + sizeof(allocator_with_fit_mode::fit_mode) +
-                                                            sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
 
-    static constexpr const size_t occupied_block_metadata_size = sizeof(size_t) + sizeof(void*) + sizeof(void*) + sizeof(void*);
-
-    static constexpr const size_t free_block_metadata_size = 0;
-
-    void *_trusted_memory;
-
-    struct global_metadata {
+     struct global_metadata {
+        std::mutex mutex;
         ::logger* logger;
         memory_resource* parent_allocator;
         size_t space_size;
-        allocator_with_fit_mode::fit_mode fit_mode;
-        std::mutex mutex;
         void* first_block;
+        allocator_with_fit_mode::fit_mode fit_mode;
     };
+
+    struct block_metadata {
+        size_t block_size;
+        void* parent;
+        void* prev;
+        void* next;
+    };
+
+    static constexpr const size_t allocator_metadata_size = sizeof(global_metadata);
+
+    static constexpr const size_t occupied_block_metadata_size = sizeof(block_metadata);
+
+    static constexpr const size_t free_block_metadata_size = 0;
+
+    void* place_after(block_metadata* cur_block_meta, size_t size);
+    void* place_first(global_metadata* meta, size_t size);
+
+    std::pair<std::string, size_t> format_blocks_info();
+
+    void *_trusted_memory;
+
 
 public:
     
     ~allocator_boundary_tags() override;
     
-    allocator_boundary_tags(allocator_boundary_tags const &other);
+    allocator_boundary_tags(allocator_boundary_tags const &other) = delete;
     
-    allocator_boundary_tags &operator=(allocator_boundary_tags const &other);
+    allocator_boundary_tags &operator=(allocator_boundary_tags const &other) = delete;
     
     allocator_boundary_tags(
         allocator_boundary_tags &&other) noexcept;
