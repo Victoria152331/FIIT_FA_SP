@@ -1,7 +1,7 @@
 #include <not_implemented.h>
 #include <cstddef>
 #include "../include/allocator_buddies_system.h"
-
+ 
 allocator_buddies_system::~allocator_buddies_system()
 {
     auto *meta = reinterpret_cast<global_metadata *>(_trusted_memory);
