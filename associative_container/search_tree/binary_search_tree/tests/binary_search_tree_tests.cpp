@@ -445,7 +445,7 @@ TEST(binarySearchTreePositiveTests, test8)
     bst1->emplace(18, "e");
     
     bst1->erase(15);
-    
+
     std::vector<test_data<int, std::string>> expected_result =
         {
                 test_data<int, std::string>(0, 6, "a"),
