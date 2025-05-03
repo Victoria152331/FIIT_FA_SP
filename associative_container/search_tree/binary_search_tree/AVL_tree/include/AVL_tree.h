@@ -567,6 +567,8 @@ public:
     using parent::insert_or_assign;
 };
 
+// 3 штуки, благодаря которым можно не писать явно шаблонные параметры, они будут опредляться по аргументам конструктора
+
 template<typename compare, typename U, typename iterator>
 explicit AVL_tree(iterator begin, iterator end, const compare& cmp = compare(),
                             pp_allocator<U> alloc = pp_allocator<U>(),
@@ -1128,7 +1130,7 @@ throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> c
 
 // region iterator requests implementation
 
-// Infix iterators
+// region Infix iterators
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_iterator AVL_tree<tkey, tvalue, compare>::begin() noexcept
 {
