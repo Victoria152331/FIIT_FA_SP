@@ -86,5 +86,6 @@
         "netfwd": "cpp",
         "socket": "cpp",
         "future": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

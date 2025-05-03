@@ -951,7 +951,11 @@ template<typename tkey, typename tvalue, typename compare, typename tag>
 void __detail::bst_impl<tkey, tvalue, compare, tag>::swap(binary_search_tree<tkey, tvalue, compare, tag> &lhs,
                                                 binary_search_tree<tkey, tvalue, compare, tag> &rhs) noexcept
 {
-    lhs.swap(rhs);
+    std::swap(lhs._root, rhs._root);
+    std::swap(lhs._size, rhs._size);
+    std::swap(lhs._logger, rhs._logger);
+    std::swap(lhs._allocator, rhs._allocator);
+    std::swap(static_cast<compare&>(lhs), static_cast<compare&>(rhs));
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
@@ -2693,11 +2697,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::emplace_or_assign(Args&&... args
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 void binary_search_tree<tkey, tvalue, compare, tag>::swap(binary_search_tree& other) noexcept
 {
-    std::swap(this->_root, other._root);
-    std::swap(this->_size, other._size);
-    std::swap(this->_logger, other._logger);
-    std::swap(this->_allocator, other._allocator);
-    std::swap(static_cast<compare&>(*this), static_cast<compare&>(other));
+    __detail::bst_impl<tkey, tvalue, compare, tag>::swap(*this, other);
 }
 
 // endregion binary_search_tree swap_method implementation
@@ -3443,8 +3443,8 @@ namespace __detail {
     typename binary_search_tree<tkey, tvalue, compare, tag>::node*
     bst_impl<tkey, tvalue, compare, tag>::create_node(binary_search_tree<tkey, tvalue, compare, tag>& cont, Args&& ...args)
     {
-        using node = typename binary_search_tree<tkey,tvalue,compare,tag>::node;
-        auto* n = cont._allocator.template new_object<node>(std::forward<Args>(args) ...);
+        using node_t = typename binary_search_tree<tkey,tvalue,compare,tag>::node;
+        auto* n = cont._allocator.template new_object<node_t>(std::forward<Args>(args) ...);
 
         ++cont._size;
         return n;

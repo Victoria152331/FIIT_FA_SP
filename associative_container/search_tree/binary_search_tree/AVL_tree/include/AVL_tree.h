@@ -589,21 +589,22 @@ namespace __detail
     template<typename tkey, typename tvalue, typename compare>
     template<class ...Args>
     binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node *bst_impl<tkey, tvalue, compare, AVL_TAG>::create_node(
-            binary_search_tree <tkey, tvalue, compare, AVL_TAG> &cont, Args &&...args)
+            binary_search_tree <tkey, tvalue, compare, AVL_TAG> &cont, Args&& ...args)
     {
-        throw not_implemented("template<typename tkey, typename tvalue, typename compare>\n"
-                              "template<class ...Args>\n"
-                              "binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node *bst_impl<tkey, tvalue, compare, AVL_TAG>::create_node(\n"
-                              "binary_search_tree <tkey, tvalue, compare, AVL_TAG> &, Args &&...)", "your code should be here...");
+        using node_t = typename AVL_tree<tkey,tvalue,compare>::node;
+        auto* n = cont._allocator.template new_object<node_t>(std::forward<Args>(args) ...);
+
+        ++cont._size;
+        return n;
     }
 
     template<typename tkey, typename tvalue, typename compare>
     void bst_impl<tkey, tvalue, compare, AVL_TAG>::delete_node(
-            binary_search_tree <tkey, tvalue, compare, AVL_TAG> &cont)
+            binary_search_tree <tkey, tvalue, compare, AVL_TAG> &cont, binary_search_tree <tkey, tvalue, compare, AVL_TAG>::node *node)
     {
-        throw not_implemented("template<typename tkey, typename tvalue, typename compare>\n"
-                              "void bst_impl<tkey, tvalue, compare, AVL_TAG>::delete_node(\n"
-                              "binary_search_tree <tkey, tvalue, compare, AVL_TAG> &)", "your code should be here...");
+        using node_t = typename AVL_tree<tkey,tvalue,compare>::node;
+        cont._allocator.delete_object(static_cast<node_t*>(node));
+       --cont._size;
     }
 
     template<typename tkey, typename tvalue, typename compare>
@@ -634,33 +635,52 @@ template<typename tkey, typename tvalue, typename compare>
 void __detail::bst_impl<tkey, tvalue, compare, __detail::AVL_TAG>::swap(binary_search_tree<tkey, tvalue, compare, AVL_TAG> &lhs,
                                                           binary_search_tree<tkey, tvalue, compare, AVL_TAG> &rhs) noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, typename compare>\n"
-                          "void __detail::bst_impl<tkey, tvalue, compare, __detail::AVL_TAG>::swap(binary_search_tree<tkey, tvalue, compare, AVL_TAG> &lhs,\n"
-                          "binary_search_tree<tkey, tvalue, compare, AVL_TAG> &rhs) noexcept", "your code should be here...");
+    std::swap(lhs._root, rhs._root);
+    std::swap(lhs._size, rhs._size);
+    std::swap(lhs._logger, rhs._logger);
+    std::swap(lhs._allocator, rhs._allocator);
+    std::swap(static_cast<compare&>(lhs), static_cast<compare&>(rhs));
 }
 
-// region node implementation
+// + region node implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 void AVL_tree<tkey, tvalue, compare>::node::recalculate_height() noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> void AVL_tree<tkey, tvalue, compare>::node::recalculate_height() noexcept", "your code should be here...");
+    size_t r = 0, l = 0;
+    if (right_subtree != nullptr) {
+        r = (static_cast<AVL_tree<tkey, tvalue, compare>::node*>(right_subtree));
+    }
+    if (left_subtree != nullptr) {
+        l = static_cast<AVL_tree<tkey, tvalue, compare>::node*>(left_subtree);
+    }
+
+    if (l > r) {
+        height = l + 1;
+    } else {
+        height = r + 1;
+    }
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 short AVL_tree<tkey, tvalue, compare>::node::get_balance() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> short AVL_tree<tkey, tvalue, compare>::node::get_balance() const noexcept", "your code should be here...");
+    size_t r = 0, l = 0;
+    if (right_subtree != nullptr) {
+        r = (static_cast<AVL_tree<tkey, tvalue, compare>::node*>(right_subtree));
+    }
+    if (left_subtree != nullptr) {
+        l = static_cast<AVL_tree<tkey, tvalue, compare>::node*>(left_subtree);
+    }
+    return static_cast<short>(r - l);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 template<class ...Args>
 AVL_tree<tkey, tvalue, compare>::node::node(parent::node* par, Args&&... args)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare>\n"
-                          "template<class ...Args>\n"
-                          "AVL_tree<tkey, tvalue, compare>::node::node(parent::node* , Args&&... )", "your code should be here...");
-}
+    : parent::node(par, std::forward<Args>(args)...)
+    , height(1)
+{}
 
 // endregion node implementation
 
