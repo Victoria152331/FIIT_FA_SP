@@ -929,7 +929,7 @@ namespace __detail
     template<typename tkey, typename tvalue, typename compare, typename tag>
     class bst_impl
     {
-        public: 
+        friend class binary_search_tree<tkey, tvalue, compare, tag>;
         template<class ...Args>
         static binary_search_tree<tkey, tvalue, compare, tag>::node* create_node(binary_search_tree<tkey, tvalue, compare, tag>& cont, Args&& ...args);
 
@@ -1915,7 +1915,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::postfix_iterator::operator++() &
     if ((_data->parent->right_subtree == _data) || (_data->parent->right_subtree == nullptr)) {
         _data = _data->parent;
     } else {
-        _data = _data->parent;
+        _data = _data->parent->right_subtree;
         while ((_data->left_subtree != nullptr) || (_data->right_subtree != nullptr)) {
             if (_data->left_subtree != nullptr) {
                 _data = _data->left_subtree;
@@ -2801,12 +2801,17 @@ binary_search_tree<tkey, tvalue, compare, tag>::erase(infix_iterator pos)
     }
 
     node** link = nullptr;
+    node* target = nullptr;
+
     if (to_del->parent == nullptr) {
         link = &_root;
+        target = _root;
     } else if (to_del->parent->left_subtree == to_del) {
         link = &(to_del->parent->left_subtree);
+        target = to_del->parent;
     } else {
         link = &(to_del->parent->right_subtree);
+        target = to_del->parent;
     }
 
     if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
@@ -2828,7 +2833,11 @@ binary_search_tree<tkey, tvalue, compare, tag>::erase(infix_iterator pos)
         while (to_swap->right_subtree != nullptr) {
             to_swap = to_swap->right_subtree;
         }
+        target = to_swap->parent;
         to_swap->parent->right_subtree = to_swap->left_subtree;
+        if (to_swap->left_subtree) {
+            to_swap->left_subtree->parent = to_swap->parent;
+        }
 
         to_swap->left_subtree = to_del->left_subtree;
         to_swap->right_subtree = to_del->right_subtree;
@@ -2840,7 +2849,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::erase(infix_iterator pos)
         to_swap->right_subtree->parent = to_swap;
     }
     
-    __detail::bst_impl<tkey, tvalue, compare, tag>::erase(*this, link);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::erase(*this, &target);
     __detail::bst_impl<tkey, tvalue, compare, tag>::delete_node(*this, to_del);
     return pos;
 }
@@ -3361,13 +3370,15 @@ void binary_search_tree<tkey, tvalue, compare, tag>::small_left_rotation(node *&
     node* tmp_root = subtree_root->right_subtree;
 
     subtree_root->right_subtree = tmp_root->left_subtree;
-    tmp_root->left_subtree->parent = subtree_root;
+
+    if (tmp_root->left_subtree) {
+        tmp_root->left_subtree->parent = subtree_root;
+    }
 
     tmp_root->parent = subtree_root->parent;
 
     subtree_root->parent = tmp_root;
     tmp_root->left_subtree = subtree_root;
-
     subtree_root = tmp_root;
 }
 
@@ -3381,7 +3392,10 @@ void binary_search_tree<tkey, tvalue, compare, tag>::small_right_rotation(node *
     node* tmp_root = subtree_root->left_subtree;
 
     subtree_root->left_subtree = tmp_root->right_subtree;
+
+    if (tmp_root->right_subtree) {
     tmp_root->right_subtree->parent = subtree_root;
+    }
 
     tmp_root->parent = subtree_root->parent;
 

@@ -77,7 +77,9 @@ bool infix_iterator_test(
 
     for (; vec_begin != vec_end; ++vec_begin)
     {
+        
         auto& item = *vec_begin;
+        //std::cout << it->first << " " << item.key << " " << it.get_height() << std::endl;
         if (it.depth() != item.depth || it->first != item.key || it->second != item.value || it.get_height() != item.height)
         {
             return false;
@@ -125,6 +127,7 @@ bool postfix_iterator_test(
 
     for (auto& item : expected_result)
     {
+        //std::cout << it->first << " " << item.key << " " << it.get_height() << std::endl;
         if (it.depth() != item.depth || it->first != item.key || it->second != item.value || it.get_height() != item.height)
         {
             return false;
