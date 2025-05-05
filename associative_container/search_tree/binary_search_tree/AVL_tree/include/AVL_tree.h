@@ -1150,7 +1150,7 @@ typename AVL_tree<tkey, tvalue, compare>::postfix_iterator AVL_tree<tkey, tvalue
 
 // endregion postfix_reverse_iterator implementation
 
-// region postfix_const_reverse_iterator implementation
+// + region postfix_const_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(parent::node* n) noexcept
@@ -1540,20 +1540,20 @@ AVL_tree<tkey, tvalue, compare>::AVL_tree(std::initializer_list<std::pair<tkey, 
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::AVL_tree(const AVL_tree& other)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::AVL_tree(const AVL_tree& )", "your code should be here...");
-}
+    :parent(static_cast<parent>(other))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>& AVL_tree<tkey, tvalue, compare>::operator=(const AVL_tree& other)
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>& AVL_tree<tkey, tvalue, compare>::operator=(const AVL_tree& )", "your code should be here...");
+    parent::operator=(static_cast<parent>(other));
+    return *this;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 void AVL_tree<tkey, tvalue, compare>::swap(parent& other) noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> void AVL_tree<tkey, tvalue, compare>::swap(parent&) noexcept", "your code should be here...");
+    parent::swap(other);
 }
 
 // endregion AVL_tree constructors
