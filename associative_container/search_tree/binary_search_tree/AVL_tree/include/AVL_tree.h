@@ -781,7 +781,7 @@ AVL_tree<tkey, tvalue, compare>::prefix_const_iterator::prefix_const_iterator(pa
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_const_iterator::prefix_const_iterator(prefix_iterator it) noexcept
-    : parent::infix_const_iterator(static_cast<parent::prefix_iterator>(it))
+    : parent::prefix_const_iterator(static_cast<parent::prefix_iterator>(it))
 {}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
@@ -800,96 +800,94 @@ size_t AVL_tree<tkey, tvalue, compare>::prefix_const_iterator::get_balance() con
 
 // endregion prefix_const_iterator implementation
 
-// region prefix_reverse_iterator implementation
+// + region prefix_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(parent::node* n) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::prefix_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(parent::prefix_reverse_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(parent::prefix_reverse_iterator) noexcept", "your code should be here...");
-}
+    : parent::prefix_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::get_height() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<prefix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::get_balance() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<prefix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(prefix_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::prefix_reverse_iterator(prefix_iterator) noexcept", "your code should be here...");
-}
+    : parent::prefix_reverse_iterator(static_cast<parent::prefix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::prefix_iterator() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::operator prefix_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::prefix_iterator
 AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::base() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::prefix_iterator AVL_tree<tkey, tvalue, compare>::prefix_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion prefix_reverse_iterator implementation
 
-// region prefix_const_reverse_iterator implementation
+// + region prefix_const_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(parent::node* n) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::prefix_const_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(parent::prefix_const_reverse_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(parent::prefix_const_reverse_iterator) noexcept", "your code should be here...");
-}
+    : parent::prefix_const_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::get_height() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<prefix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::get_balance() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<prefix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(prefix_const_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::prefix_const_reverse_iterator(prefix_const_iterator) noexcept", "your code should be here...");
-}
+    : parent::infix_const_reverse_iterator(static_cast<parent::prefix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::prefix_const_iterator() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::operator prefix_const_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::prefix_const_iterator
 AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::base() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::prefix_const_iterator AVL_tree<tkey, tvalue, compare>::prefix_const_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion prefix_const_reverse_iterator implementation
@@ -956,94 +954,92 @@ AVL_tree<tkey, tvalue, compare>::infix_const_iterator::infix_const_iterator(infi
 
 // endregion infix_const_iterator implementation
 
-// region infix_reverse_iterator implementation
+// + region infix_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(parent::node* n) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::infix_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(parent::infix_reverse_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(parent::infix_reverse_iterator ) noexcept", "your code should be here...");
-}
+    : parent::infix_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::get_height() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<infix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::get_balance() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<infix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(infix_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::infix_reverse_iterator(infix_iterator) noexcept", "your code should be here...");
-}
+    : parent::infix_reverse_iterator(static_cast<parent::infix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::infix_iterator() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::operator infix_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_iterator AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::base() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_iterator AVL_tree<tkey, tvalue, compare>::infix_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion infix_reverse_iterator implementation
 
-// region infix_const_reverse_iterator implementation
+// + region infix_const_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(parent::node* n) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::infix_const_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(parent::infix_const_reverse_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(parent::infix_const_reverse_iterator) noexcept", "your code should be here...");
-}
+    : parent::infix_const_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::get_height() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<infix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::get_balance() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<infix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(infix_const_iterator it) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::infix_const_reverse_iterator(infix_const_iterator) noexcept", "your code should be here...");
-}
+    : parent::infix_const_reverse_iterator(static_cast<parent::infix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::infix_const_iterator() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::operator infix_const_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::base() const noexcept
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator AVL_tree<tkey, tvalue, compare>::infix_const_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion infix_const_reverse_iterator implementation
@@ -1109,48 +1105,47 @@ AVL_tree<tkey, tvalue, compare>::postfix_const_iterator::postfix_const_iterator(
 
 // endregion postfix_const_iterator implementation
 
-// region postfix_reverse_iterator implementation
+// + region postfix_reverse_iterator implementation
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(parent::node* n) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::postfix_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(parent::postfix_reverse_iterator it) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(parent::postfix_reverse_iterator) noexcept", "your code should be here...");
-}
+    : parent::postfix_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::get_height() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<postfix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::get_balance() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<postfix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(postfix_iterator it) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::postfix_reverse_iterator(postfix_iterator) noexcept", "your code should be here...");
-}
+    : parent::postfix_reverse_iterator(static_cast<parent::postfix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::postfix_iterator() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::operator postfix_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::postfix_iterator AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::base() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::postfix_iterator AVL_tree<tkey, tvalue, compare>::postfix_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion postfix_reverse_iterator implementation
@@ -1159,44 +1154,43 @@ throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> c
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(parent::node* n) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(parent::node*) noexcept", "your code should be here...");
-}
+    : parent::postfix_const_reverse_iterator(n)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(parent::postfix_const_reverse_iterator it) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(parent::postfix_const_reverse_iterator) noexcept", "your code should be here...");
-}
+    : parent::postfix_const_reverse_iterator(it)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::get_height() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::get_height() const noexcept", "your code should be here...");
+    auto n = static_cast<postfix_iterator>(this->_base);
+    return n.get_height();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 size_t AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::get_balance() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> size_t AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::get_balance() const noexcept", "your code should be here...");
+    auto n = static_cast<postfix_iterator>(this->_base);
+    return n.get_balance();
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(postfix_const_iterator it) noexcept
-{
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::postfix_const_reverse_iterator(postfix_const_iterator) noexcept", "your code should be here...");
-}
+    : parent::postfix_const_reverse_iterator(static_cast<parent::postfix_iterator>(it))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::operator AVL_tree<tkey, tvalue, compare>::postfix_const_iterator() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::operator postfix_const_iterator() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::postfix_const_iterator AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::base() const noexcept
 {
-throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::postfix_const_iterator AVL_tree<tkey, tvalue, compare>::postfix_const_reverse_iterator::base() const noexcept", "your code should be here...");
+    return this->_base;
 }
 
 // endregion postfix_const_reverse_iterator implementation
