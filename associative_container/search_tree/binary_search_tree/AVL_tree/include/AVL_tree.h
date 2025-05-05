@@ -1201,7 +1201,7 @@ throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> c
 
 // endregion postfix_const_reverse_iterator implementation
 
-// region iterator requests implementation
+// + region iterator requests implementation
 
 // + region Infix iterators
 template<typename tkey, typename tvalue, compator<tkey> compare>
@@ -1564,7 +1564,7 @@ void AVL_tree<tkey, tvalue, compare>::swap(parent& other) noexcept
 
 // endregion AVL_tree constructors
 
-// region AVL_tree methods
+// + region AVL_tree methods
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 std::pair<typename AVL_tree<tkey, tvalue, compare>::infix_iterator, bool>
@@ -1636,28 +1636,32 @@ template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_iterator
 AVL_tree<tkey, tvalue, compare>::lower_bound(const tkey& key)
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_iterator AVL_tree<tkey, tvalue, compare>::lower_bound(const tkey&)", "your code should be here...");
+    auto it = parent::lower_bound(key);
+    return infix_iterator(it);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator
 AVL_tree<tkey, tvalue, compare>::lower_bound(const tkey& key) const
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator AVL_tree<tkey, tvalue, compare>::lower_bound(const tkey&) const", "your code should be here...");
+    auto it = parent::lower_bound(key);
+    return infix_const_iterator(it);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_iterator
 AVL_tree<tkey, tvalue, compare>::upper_bound(const tkey& key)
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_iterator AVL_tree<tkey, tvalue, compare>::upper_bound(const tkey&)", "your code should be here...");
+    auto it = parent::upper_bound(key);
+    return infix_iterator(it);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator
 AVL_tree<tkey, tvalue, compare>::upper_bound(const tkey& key) const
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> typename AVL_tree<tkey, tvalue, compare>::infix_const_iterator AVL_tree<tkey, tvalue, compare>::upper_bound(const tkey&) const", "your code should be here...");
+    auto it = parent::upper_bound(key);
+    return infix_const_iterator(it);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare>

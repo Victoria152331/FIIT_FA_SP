@@ -194,7 +194,7 @@ TEST(AVLTreePositiveTests, test2)
     avl->emplace(15, 1);
     avl->emplace(3, 67);
     avl->emplace(4, 45);
-    
+
     std::vector<test_data<int, int>> expected_result =
         {
                 test_data<int, int>(0, 2, 12, 3),
