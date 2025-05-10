@@ -202,17 +202,23 @@ big_int &big_int::operator%=(const big_int &other) &
 
 big_int big_int::operator&(const big_int &other) const
 {
-    throw not_implemented("big_int big_int::operator&(const big_int &) const", "your code should be here...");
+    auto res = *this;
+    res &= other;
+    return res;
 }
 
 big_int big_int::operator|(const big_int &other) const
 {
-    throw not_implemented("big_int big_int::operator|(const big_int &) const", "your code should be here...");
+    auto res = *this;
+    res &= other;
+    return res;
 }
 
 big_int big_int::operator^(const big_int &other) const
 {
-    throw not_implemented("big_int big_int::operator^(const big_int &) const", "your code should be here...");
+    auto res = *this;
+    res ^= other;
+    return res;
 }
 
 big_int big_int::operator<<(size_t shift) const
@@ -231,45 +237,112 @@ big_int big_int::operator>>(size_t shift) const
 
 big_int big_int::operator~() const
 {
-    throw not_implemented("big_int big_int::operator~() const", "your code should be here...");
+    auto res = *this;
+    for (size_t i = 0; i < res._digits.size(); i++) {
+        res._digits[i] = ~res._digits[i];
+    }
+    return res;
 }
 
 big_int &big_int::operator&=(const big_int &other) &
 {
-    throw not_implemented("big_int &big_int::operator&=(const big_int &)", "your code should be here...");
+    size_t this_size = _digits.size();
+    size_t other_size = other._digits.size();
+
+    if (this_size > other_size) {
+        this_size = other_size;
+        _digits.erase(_digits.begin() + other_size, _digits.end());
+    }
+
+    for (size_t i; i < this_size; i++) {
+        _digits[i] &= other._digits[i];
+    }
+    return *this;
 }
 
 big_int &big_int::operator|=(const big_int &other) &
 {
-    throw not_implemented("big_int &big_int::operator|=(const big_int &)", "your code should be here...");
+    size_t this_size = _digits.size();
+    size_t other_size = other._digits.size();
+    
+    if (this_size < other_size) {
+        other_size = this_size;
+        _digits.insert(_digits.end(), other._digits.begin() + this_size, other._digits.end());
+    }
+
+    for (size_t i; i < other_size; i++) {
+        _digits[i] |= other._digits[i];
+    }
+    return *this;
 }
 
 big_int &big_int::operator^=(const big_int &other) &
 {
-    throw not_implemented("big_int &big_int::operator^=(const big_int &)", "your code should be here...");
+    size_t this_size = _digits.size();
+    size_t other_size = other._digits.size();
+    
+    if (this_size < other_size) {
+        other_size = this_size;
+        _digits.insert(_digits.end(), other._digits.begin() + this_size, other._digits.end());
+    }
+
+    for (size_t i; i < this_size; i++) {
+        _digits[i] ^= other._digits[i];
+    }
+    return *this;
 }
 
 big_int &big_int::operator<<=(size_t shift) &
 {
-    if (shift > 0) {
+    size_t big_shift = shift / 8;
+    size_t little_shift = shift % 8;
+    if (big_shift > 0) {
         auto it = _digits.cbegin();
-        _digits.insert(it, shift, 0);
+        _digits.insert(it, big_shift, 0);
+    }
+    if (little_shift == 0) {
+        return *this;
+    }
+    unsigned int mask = ((1 << little_shift) - 1) << (8 - little_shift);
+    unsigned int buf1, buf2 = 0;
+    for (size_t i = big_shift; i < _digits.size(); i++) {
+        buf1 = _digits[i] & mask;
+        _digits[i] = (_digits[i] << little_shift) | buf2;
+        buf2 = buf1 >> little_shift;
+    }
+    if (buf2) {
+        _digits.push_back(buf2);
     }
     return *this;
 }
 
 big_int &big_int::operator>>=(size_t shift) &
 {
-    if (shift > 0) {
+    size_t big_shift = shift / 8;
+    size_t little_shift = shift % 8;
+    if (big_shift > 0) {
         auto it = _digits.cbegin();
-        _digits.erase(it, it + shift - 1);
+        _digits.erase(it, it + big_shift - 1);
+    }
+    if (little_shift == 0) {
+        return *this;
+    }
+    unsigned int mask = (1 << little_shift) - 1;
+    unsigned int buf1, buf2 = 0;
+    for (size_t i = _digits.size() - 1; i <= big_shift; i--) {
+        buf1 = _digits[i] & mask;
+        _digits[i] = (_digits[i] >> little_shift) | buf2;
+        buf2 = buf1 << (8 - little_shift);
+    }
+    if (_digits[_digits.size() - 1] == 0) {
+        _digits.pop_back();
     }
     return *this;
 }
 
 big_int &big_int::plus_assign(const big_int &other, size_t shift) &
 {
-    auto summand = other << shift;
+    auto summand = other << (shift * 8);
     if (!(*this)) {
         *this = summand;
         return *this;
@@ -281,7 +354,7 @@ big_int &big_int::plus_assign(const big_int &other, size_t shift) &
     if (this->_sign > summand._sign) { // pos + neg
         summand._sign = true;
         *this -= summand;
-        return *this
+        return *this;
     } if (this->_sign < summand._sign) { // neg + pos
         summand._sign = false;
         *this -= summand;
@@ -294,7 +367,7 @@ big_int &big_int::plus_assign(const big_int &other, size_t shift) &
     size_t i = 0;
     for (; i < summand._digits.size(); i++) {
         if (i >= num_size) {
-            this->_digits.push_back(summand[i] + acc);
+            this->_digits.push_back(summand._digits[i] + acc);
             acc = 0;
         } else {
             buf = (_digits[i] & 1) + (summand._digits[i] & 1);
@@ -302,7 +375,7 @@ big_int &big_int::plus_assign(const big_int &other, size_t shift) &
             _digits[i] >>= 1;
             summand._digits[i] >>= 1;
             _digits[i] += summand._digits[i] + acc;
-            acc = (_digits[i] & (1 << (sizeof(unsigned int) * 8 - 1)))
+            acc = (_digits[i] & (1 << (sizeof(unsigned int) * 8 - 1)));
             _digits[i] <<= 1;
             _digits[i] += buf;
         }
@@ -324,7 +397,53 @@ big_int &big_int::plus_assign(const big_int &other, size_t shift) &
 
 big_int &big_int::minus_assign(const big_int &other, size_t shift) &
 {
-    throw not_implemented("big_int &big_int::minus_assign(const big_int &, size_t)", "your code should be here...");
+    auto sub = other << (shift * 8);
+    if (!(*this)) {
+        *this = sub;
+        this->_sign = !(this->_sign);
+        return *this;
+    }
+    if (!sub) {
+        return *this;
+    }
+
+    if (this->_sign > sub._sign) { // pos - neg
+        sub._sign = true;
+        *this += sub;
+        return *this;
+    } if (this->_sign < sub._sign) { // neg - pos
+        sub._sign = false;
+        *this += sub;
+        return *this;
+    }
+
+    auto cmp = (*this) <=> sub;
+    if (cmp == 0) {
+        _sign = 1;
+        _digits.clear();
+        _digits.push_back(0);
+        return *this;
+    }
+    if (cmp < 0) {
+        auto tmp = *this;
+        *this = sub;
+        sub = tmp;
+        _sign = !_sign;
+    }
+
+    bool acc = false;
+    unsigned int sub_item;
+    size_t i = 0;
+    for (; i < sub._digits.size(); i++) {
+        sub_item = sub._digits[i] + acc;
+        acc = _digits[i] < sub_item;
+        _digits[i] -= sub_item;
+    }
+    while(acc) {
+        acc = _digits[i] == 0;
+        _digits[i] -= 1;
+    }
+    return *this;
 }
 
 
@@ -388,7 +507,7 @@ big_int::division_rule big_int::decide_div(size_t rhs) const noexcept {
 
 big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_rule rule) &
 {
-    throw not_implemented("big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_rule rule) &", "your code should be here...");
+    
 }
 
 big_int &big_int::divide_assign(const big_int &other, big_int::division_rule rule) &
