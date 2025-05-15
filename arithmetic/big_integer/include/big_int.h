@@ -54,6 +54,13 @@ class big_int
 
 public:
 
+    void debug_print() {
+        for (size_t i = _digits.size(); i > 0; i--) {
+            std::cout << _digits[i - 1] << " ";
+        }
+        std::cout << std::endl;
+    }
+
     enum class multiplication_rule
     {
         trivial,
@@ -128,6 +135,8 @@ public:
 
     big_int& modulo_assign(const big_int& other, division_rule rule = division_rule::trivial) &;
 
+    static std::pair<big_int, big_int> full_division_trivial(const big_int& dividend, const big_int& divisor);
+
     big_int operator+(const big_int& other) const;
     big_int operator-(const big_int& other) const;
     big_int operator*(const big_int& other) const;
@@ -164,11 +173,20 @@ public:
     friend std::istream &operator>>(std::istream &stream, big_int &value);
 
     std::string to_string() const;
+    void optimise();
 };
 
 template<class alloc>
 big_int::big_int(const std::vector<unsigned int, alloc> &digits, bool sign, pp_allocator<unsigned int> allocator) :
-            _sign(sign), _digits(digits.begin(), digits.end(), allocator) {}
+            _sign(sign), _digits(digits.begin(), digits.end(), allocator)
+{
+    optimise();
+    // std::cout << "create ";
+    // for (size_t i = 0; i < _digits.size(); i++) {
+    //     std::cout << _digits[i] << " ";
+    // }
+    // std::cout << std::endl;
+}
 
 template<std::integral Num>
 big_int::big_int(Num d, pp_allocator<unsigned int> allocator)
@@ -189,6 +207,7 @@ big_int::big_int(Num d, pp_allocator<unsigned int> allocator)
             d = d >> (sizeof(unsigned int) * 8);
         }
     }
+    optimise();
 }
 
 big_int operator""_bi(unsigned long long n);

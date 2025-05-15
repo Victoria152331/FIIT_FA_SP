@@ -32,12 +32,19 @@ logger *create_logger(
 TEST(my_test, t1)
 {
     std::vector<unsigned int> vec1{0, 1, 2, 3, 4, 5};
+    // std::vector<unsigned int> vec1{0, 0, 1};
 
     big_int num1(vec1);
 
     std::vector<unsigned int> vec2{3, 2, 1};
+    // std::vector<unsigned int> vec2{INT_MAX + 1};
 
     big_int num2(vec2);
+    // num1.debug_print();
+    // num2.debug_print();
+
+    // num1.divide_assign(num2);
+    // num1.debug_print();
 
     auto res_div = num1 / num2;
 
