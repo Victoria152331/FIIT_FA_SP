@@ -428,10 +428,11 @@ std::string big_int::to_string() const
     const big_int ten(10);
 
     while (tmp) {
-        big_int digit = tmp % ten;
-        unsigned int d = digit._digits[0];
-        result.push_back(char('0' + d));
-        tmp = tmp / ten;
+        auto [div, mod] = full_division_trivial(tmp, ten);
+        big_int digit = mod;
+        result.push_back(static_cast<char>('0' + digit._digits[0]));
+        tmp = div;
+        
     }
 
     if (!positive) {
@@ -445,47 +446,84 @@ std::string big_int::to_string() const
 
 std::ostream &operator<<(std::ostream &stream, const big_int &value)
 {
-    throw not_implemented("std::ostream &operator<<(std::ostream &, const big_int &)", "your code should be here...");
+    stream << value.to_string();
+    return stream;
 }
 
 std::istream &operator>>(std::istream &stream, big_int &value)
 {
-    throw not_implemented("std::istream &operator>>(std::istream &, big_int &)", "your code should be here...");
+    std::string str;
+    stream >> str;
+    value = big_int(str);
+    return stream;
 }
 
 big_int::big_int(const std::vector<unsigned int, pp_allocator<unsigned int>> &digits, bool sign)
     : _sign(sign)
-    , _digits(digits)
+    , _digits(digits.begin(), digits.end())
 {
     optimise();
-    std::cout << "create ";
-    for (size_t i = 0; i < _digits.size(); i++) {
-        std::cout << _digits[i] << " ";
-    }
-    std::cout << std::endl;
 }
 
 big_int::big_int(std::vector<unsigned int, pp_allocator<unsigned int>> &&digits, bool sign) noexcept
     : _sign(sign)
     , _digits(digits)
 {
-    std::cout << "cr2" << std::endl;
     optimise();
 }
 
-big_int::big_int(const std::string &num, unsigned int radix, pp_allocator<unsigned int>)
+big_int::big_int(const std::string &num, unsigned int radix, pp_allocator<unsigned int> allocator)
+    : _sign(true)
+    , _digits(1, 0, allocator)
 {
-    std::cout << "cr3" << std::endl;
+    if (num.empty()) {
+        return;
+    }
+
+    std::size_t pos = 0;
+    bool buf_sign = true;
+
+    if (num[0] == '+') {
+        pos++;
+    } else if (num[0] == '-') {
+        buf_sign = false;
+        pos++;
+    }
+
+    for (; pos < num.size(); ++pos) {
+        char c = num[pos];  
+        unsigned int digit;
+
+        if ((c >= '0') && (c <= '9')) {
+            digit = c - '0';
+        } else if ((c >= 'A') && (c <= 'Z')) {
+            digit = c - 'A' + 10;
+        } else if ((c >= 'a') && (c <= 'z')) {
+            digit = c - 'a' + 10;
+        } else {
+            throw std::invalid_argument("invalid symb");
+        }
+
+        if (digit >= radix) {
+            throw std::invalid_argument("digit greater than radix");
+        }
+
+        *this *= big_int(radix);
+        *this += big_int(digit);
+    }
+
+    _sign = buf_sign;
+    optimise();  // убираем ведущие нули
 }
 
-big_int::big_int(pp_allocator<unsigned int>)
-{
-    std::cout << "cr4" << std::endl;
-}
+big_int::big_int(pp_allocator<unsigned int> allocator)
+    : _sign(true)
+    , _digits(1, 0, allocator)
+{}
 
 big_int::multiplication_rule big_int::decide_mult(size_t rhs) const noexcept {
     size_t max_size = std::max(rhs, this->_digits.size());
-    if (max_size < 10) {
+    if (max_size < 20) {
         return big_int::multiplication_rule::trivial;
     } else if (max_size < 1000) {
         return big_int::multiplication_rule::Karatsuba;
@@ -497,7 +535,7 @@ big_int::multiplication_rule big_int::decide_mult(size_t rhs) const noexcept {
 
 big_int::division_rule big_int::decide_div(size_t rhs) const noexcept {
     size_t max_size = std::max(rhs, this->_digits.size());
-    if (max_size < 10) {
+    if (max_size < 20) {
         return big_int::division_rule::trivial;
     } else if (max_size < 1000) {
         return big_int::division_rule::Newton;
@@ -509,6 +547,10 @@ big_int::division_rule big_int::decide_div(size_t rhs) const noexcept {
 big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_rule rule) &
 {
     if (rule == big_int::multiplication_rule::trivial) {
+        if (!(*this) || !other) {
+            *this = big_int(0);
+            return *this;
+        }
         _sign = (_sign == other._sign);
         big_int buf = *this;
         _digits.clear();
@@ -545,6 +587,71 @@ big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_
             }
         }
     }
+    else if (rule == multiplication_rule::Karatsuba) {
+        // 1) ноль
+        if (!(*this) || !other) {
+            *this = big_int(0);
+            return *this;
+        }
+
+        // 2) сохраним знак результата
+        bool result_sign = (_sign == other._sign);
+
+        // 3) абсолютные копии для разбиения и рекурсии
+        big_int a = *this; a._sign = true;
+        big_int b = other; b._sign = true;
+
+        size_t n = std::max(a._digits.size(), b._digits.size());
+        // 4) базовый случай — одна «цифра»
+        if (n <= 1) {
+            *this = a;           // восстановим a (одна цифра)
+            _sign = true;        // знак + для тривиального
+            multiply_assign(b, multiplication_rule::trivial);
+            _sign = result_sign;
+            optimise();
+            return *this;
+        }
+
+        size_t m = n / 2;
+
+        // 5) разделим a = high1·B^m + low1
+        big_int low1, high1;
+        low1._digits.assign(a._digits.begin(),
+                            a._digits.begin() + std::min(a._digits.size(), m));
+        high1._digits.assign(a._digits.begin() + std::min(a._digits.size(), m),
+                             a._digits.end());
+        low1.optimise(); high1.optimise();
+
+        // 6) разделим b = high2·B^m + low2
+        big_int low2, high2;
+        low2._digits.assign(b._digits.begin(),
+                            b._digits.begin() + std::min(b._digits.size(), m));
+        high2._digits.assign(b._digits.begin() + std::min(b._digits.size(), m),
+                             b._digits.end());
+        low2.optimise(); high2.optimise();
+
+        // 7) три рекурсивных произведения (все по Карацубе)
+        big_int z0 = low1;   z0.multiply_assign(low2,  multiplication_rule::Karatsuba);
+        big_int z2 = high1;  z2.multiply_assign(high2, multiplication_rule::Karatsuba);
+
+        big_int sum1 = low1; sum1.plus_assign(high1);  // (low1+high1)
+        big_int sum2 = low2; sum2.plus_assign(high2);  // (low2+high2)
+
+        big_int z1 = sum1;
+        z1.multiply_assign(sum2,  multiplication_rule::Karatsuba);
+        z1.minus_assign(z2);
+        z1.minus_assign(z0);
+
+        // 8) соберём результат: z2·B^(2m) + z1·B^m + z0
+        *this = z0;
+        plus_assign(z1,   m);
+        plus_assign(z2, 2*m);
+
+        // 9) восстановим знак и оптимизируем
+        _sign = result_sign;
+    }
+
+
     optimise();
     return *this;
 }
@@ -569,10 +676,14 @@ big_int &big_int::modulo_assign(const big_int &other, big_int::division_rule rul
     return *this;
 }
 
-std::pair<big_int, big_int> big_int::full_division_trivial(const big_int& dividend, const big_int& divisor) {
-    if (!divisor) {
-        throw std::runtime_error("division by zero");
+std::pair<big_int, big_int> big_int::full_division_trivial(const big_int& _dividend, const big_int& _divisor) {
+    if (!_divisor) {
+        throw std::logic_error("division by zero");
     }
+    big_int dividend = _dividend;
+    big_int divisor = _divisor;
+    dividend._sign = true;
+    divisor._sign = true;
     if (dividend < divisor) {
         auto res = std::make_pair(big_int(0), dividend);
         return res;
@@ -617,7 +728,7 @@ std::pair<big_int, big_int> big_int::full_division_trivial(const big_int& divide
         // mod.debug_print();
         divisor_shifted >>= BITS;
     }
-    quotient._sign = (dividend._sign == divisor._sign);
+    quotient._sign = (_dividend._sign == _divisor._sign);
     quotient.optimise();
     mod.optimise();
     auto res = std::make_pair(quotient, mod);

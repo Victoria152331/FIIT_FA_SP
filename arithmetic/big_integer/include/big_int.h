@@ -93,12 +93,12 @@ public:
 
     explicit big_int(std::vector<unsigned int, pp_allocator<unsigned int>> &&digits, bool sign = true) noexcept;
 
-    explicit big_int(const std::string& num, unsigned int radix = 10, pp_allocator<unsigned int> = pp_allocator<unsigned int>());
+    explicit big_int(const std::string& num, unsigned int radix = 10, pp_allocator<unsigned int> allocator = pp_allocator<unsigned int>());
 
     template<std::integral Num>
-    big_int(Num d, pp_allocator<unsigned int> = pp_allocator<unsigned int>());
+    big_int(Num d, pp_allocator<unsigned int> allocator = pp_allocator<unsigned int>());
 
-    big_int(pp_allocator<unsigned int> = pp_allocator<unsigned int>());
+    big_int(pp_allocator<unsigned int> allocator = pp_allocator<unsigned int>());
 
     explicit operator bool() const noexcept; //false if 0 , else true
 
@@ -181,11 +181,6 @@ big_int::big_int(const std::vector<unsigned int, alloc> &digits, bool sign, pp_a
             _sign(sign), _digits(digits.begin(), digits.end(), allocator)
 {
     optimise();
-    // std::cout << "create ";
-    // for (size_t i = 0; i < _digits.size(); i++) {
-    //     std::cout << _digits[i] << " ";
-    // }
-    // std::cout << std::endl;
 }
 
 template<std::integral Num>

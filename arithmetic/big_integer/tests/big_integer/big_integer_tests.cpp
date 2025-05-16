@@ -32,19 +32,30 @@ logger *create_logger(
 TEST(my_test, t1)
 {
     std::vector<unsigned int> vec1{0, 1, 2, 3, 4, 5};
-    // std::vector<unsigned int> vec1{0, 0, 1};
-
+    //std::vector<unsigned int> vec1{5, 3626289017, 2566700838, 1570209544, 1018000044, 3245460356, 2336193427, 135857599, 1428888145, 4226474251};
+    // std::vector<unsigned int> vec1{1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // std::reverse(vec1.begin(), vec1.end());
     big_int num1(vec1);
 
     std::vector<unsigned int> vec2{3, 2, 1};
-    // std::vector<unsigned int> vec2{INT_MAX + 1};
+    // std::vector<unsigned int> vec2{10};
 
     big_int num2(vec2);
     // num1.debug_print();
     // num2.debug_print();
-
-    // num1.divide_assign(num2);
+    // big_int bigint_1("123424353464389587244387927589346894576464343235445645674563532464675467425");
+    // big_int bigint_2("2354893245937465784937542389428935349086840957804985309763636567574564");
+    // big_int res2("21574656300");
+    // big_int res("290651176357489495451049958587923972328418314663424320128873904703658883667429195585130334492391519870913575716570325570910803505581125240577700");
+    // res.debug_print();
     // num1.debug_print();
+    // std::cout << num1 << std::endl;
+    // res.modulo_assign(num2);
+    // res.debug_print();
+    // std::cout << res << std::endl;
+
+    //num1.modulo_assign(num2);
+    //num1.debug_print();
 
     auto res_div = num1 / num2;
 
