@@ -38,22 +38,32 @@ fraction fraction::operator-(fraction const &other) const
 
 fraction &fraction::operator*=(fraction const &other) &
 {
-    throw not_implemented("fraction &fraction::operator*=(fraction const &) &", "your code should be here...");
+    _denominator *= other._denominator;
+    _numerator *= other._numerator;
+    optimise();
+    return *this;
 }
 
 fraction fraction::operator*(fraction const &other) const
 {
-    throw not_implemented("fraction fraction::operator*(fraction const &) const", "your code should be here...");
+    fraction res = *this;
+    res *= other;
+    return res;
 }
 
 fraction &fraction::operator/=(fraction const &other) &
 {
-    throw not_implemented("fraction &fraction::operator/=(fraction const &) &", "your code should be here...");
+    _denominator *= other._numerator;
+    _numerator *= other._denominator;
+    optimise();
+    return *this;
 }
 
 fraction fraction::operator/(fraction const &other) const
 {
-    throw not_implemented("fraction fraction::operator/(fraction const &) const", "your code should be here...");
+    fraction res = *this;
+    res *= other;
+    return res;
 }
 
 bool fraction::operator==(fraction const &other) const noexcept

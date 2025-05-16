@@ -127,6 +127,8 @@ public:
 
     big_int& multiply_assign(const big_int& other, multiplication_rule rule = multiplication_rule::trivial) &;
 
+    static big_int karatsuba(const big_int& a, const big_int& b);
+
     big_int& operator/=(const big_int& other) &;
 
     big_int& divide_assign(const big_int& other, division_rule rule = division_rule::trivial) &;

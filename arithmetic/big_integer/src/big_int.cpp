@@ -528,20 +528,22 @@ big_int::multiplication_rule big_int::decide_mult(size_t rhs) const noexcept {
     } else if (max_size < 1000) {
         return big_int::multiplication_rule::Karatsuba;
     } else {
-        return big_int::multiplication_rule::SchonhageStrassen;
+        //return big_int::multiplication_rule::SchonhageStrassen;
+        return big_int::multiplication_rule::Karatsuba;
     }
     
 }
 
 big_int::division_rule big_int::decide_div(size_t rhs) const noexcept {
-    size_t max_size = std::max(rhs, this->_digits.size());
-    if (max_size < 20) {
-        return big_int::division_rule::trivial;
-    } else if (max_size < 1000) {
-        return big_int::division_rule::Newton;
-    } else {
-        return big_int::division_rule::BurnikelZiegler;
-    }
+    // size_t max_size = std::max(rhs, this->_digits.size());
+    // if (max_size < 20) {
+    //     return big_int::division_rule::trivial;
+    // } else if (max_size < 1000) {
+    //     return big_int::division_rule::Newton;
+    // } else {
+    //     return big_int::division_rule::BurnikelZiegler;
+    // }
+    return big_int::division_rule::trivial;
 }
 
 big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_rule rule) &
@@ -588,72 +590,92 @@ big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_
         }
     }
     else if (rule == multiplication_rule::Karatsuba) {
-        // 1) ноль
         if (!(*this) || !other) {
             *this = big_int(0);
             return *this;
         }
 
-        // 2) сохраним знак результата
         bool result_sign = (_sign == other._sign);
 
-        // 3) абсолютные копии для разбиения и рекурсии
         big_int a = *this; a._sign = true;
         big_int b = other; b._sign = true;
 
-        size_t n = std::max(a._digits.size(), b._digits.size());
-        // 4) базовый случай — одна «цифра»
-        if (n <= 1) {
-            *this = a;           // восстановим a (одна цифра)
-            _sign = true;        // знак + для тривиального
-            multiply_assign(b, multiplication_rule::trivial);
-            _sign = result_sign;
-            optimise();
-            return *this;
-        }
+        *this = karatsuba(a, b);
 
-        size_t m = n / 2;
-
-        // 5) разделим a = high1·B^m + low1
-        big_int low1, high1;
-        low1._digits.assign(a._digits.begin(),
-                            a._digits.begin() + std::min(a._digits.size(), m));
-        high1._digits.assign(a._digits.begin() + std::min(a._digits.size(), m),
-                             a._digits.end());
-        low1.optimise(); high1.optimise();
-
-        // 6) разделим b = high2·B^m + low2
-        big_int low2, high2;
-        low2._digits.assign(b._digits.begin(),
-                            b._digits.begin() + std::min(b._digits.size(), m));
-        high2._digits.assign(b._digits.begin() + std::min(b._digits.size(), m),
-                             b._digits.end());
-        low2.optimise(); high2.optimise();
-
-        // 7) три рекурсивных произведения (все по Карацубе)
-        big_int z0 = low1;   z0.multiply_assign(low2,  multiplication_rule::Karatsuba);
-        big_int z2 = high1;  z2.multiply_assign(high2, multiplication_rule::Karatsuba);
-
-        big_int sum1 = low1; sum1.plus_assign(high1);  // (low1+high1)
-        big_int sum2 = low2; sum2.plus_assign(high2);  // (low2+high2)
-
-        big_int z1 = sum1;
-        z1.multiply_assign(sum2,  multiplication_rule::Karatsuba);
-        z1.minus_assign(z2);
-        z1.minus_assign(z0);
-
-        // 8) соберём результат: z2·B^(2m) + z1·B^m + z0
-        *this = z0;
-        plus_assign(z1,   m);
-        plus_assign(z2, 2*m);
-
-        // 9) восстановим знак и оптимизируем
         _sign = result_sign;
     }
 
 
     optimise();
     return *this;
+}
+
+big_int big_int::karatsuba(const big_int& a, const big_int& b)
+{
+    size_t n = std::max(a._digits.size(), b._digits.size());
+    big_int res;
+
+    if (n <= 1) {
+        res = a;
+        res.multiply_assign(b, multiplication_rule::trivial);
+        res.optimise();
+        return res;
+    }
+
+    size_t m = n / 2;
+
+    // 5) разделим a = high1·B^m + low1
+
+    big_int low1 = a;
+    if (low1._digits.size() > m) {
+        low1._digits.resize(m);
+    }
+
+    big_int high1 = a;
+    if (high1._digits.size() > m) {
+        high1._digits.erase(high1._digits.begin(),
+                                high1._digits.begin() + m);
+    } else {
+        high1 = big_int(0);
+    }
+
+    low1.optimise();
+    high1.optimise();
+
+    // 6) разделим b = high2·B^m + low2
+    big_int low2 = b;
+    if (low2._digits.size() > m) {
+        low2._digits.resize(m);
+    }
+
+    big_int high2 = b;
+    if (high2._digits.size() > m) {
+        high2._digits.erase(high2._digits.begin(),
+                                high2._digits.begin() + m);
+    } else {
+        high2 = big_int(0);
+    }
+    
+    low2.optimise();
+    high2.optimise();
+
+    // 7) три рекурсивных произведения (все по Карацубе)
+    big_int z0 = karatsuba(low1, low2);
+    big_int z2 = karatsuba(high1, high2);
+
+    big_int sum1 = low1 + high1;
+    big_int sum2 = low2 + high2;
+
+    big_int z1 = karatsuba(sum1, sum2) - z0 - z2;
+
+    // 8) соберём результат: z2·B^(2m) + z1·B^m + z0
+    res = z0;
+    res.plus_assign(z1, m);
+    res.plus_assign(z2, 2 * m);
+    res.optimise();
+    return res;
+
+    // 9) восстановим знак и оптимизируем
 }
 
 big_int &big_int::divide_assign(const big_int &other, big_int::division_rule rule) &
@@ -737,7 +759,7 @@ std::pair<big_int, big_int> big_int::full_division_trivial(const big_int& _divid
 
 big_int operator""_bi(unsigned long long n)
 {
-    throw not_implemented("big_int operator\"\"_bi(unsigned long long n)", "your code should be here...");
+    return big_int(n);
 }
 
 void big_int::optimise() {
