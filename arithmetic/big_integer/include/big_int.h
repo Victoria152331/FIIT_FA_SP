@@ -200,7 +200,7 @@ big_int::big_int(Num d, pp_allocator<unsigned int> allocator)
         std::size_t n = sizeof(Num) / sizeof(unsigned int);
         _digits = std::vector<unsigned int, pp_allocator<unsigned int>> (n, allocator);
         for (std::size_t i = 0; i < n; ++i) {
-            _digits[i] = d & ((1 << (sizeof(unsigned int) * 8)) - 1);
+            _digits[i] = d & UINT_MAX;
             d = d >> (sizeof(unsigned int) * 8);
         }
     }
