@@ -624,8 +624,6 @@ big_int big_int::karatsuba(const big_int& a, const big_int& b)
 
     size_t m = n / 2;
 
-    // 5) разделим a = high1·B^m + low1
-
     big_int low1 = a;
     if (low1._digits.size() > m) {
         low1._digits.resize(m);
@@ -642,7 +640,6 @@ big_int big_int::karatsuba(const big_int& a, const big_int& b)
     low1.optimise();
     high1.optimise();
 
-    // 6) разделим b = high2·B^m + low2
     big_int low2 = b;
     if (low2._digits.size() > m) {
         low2._digits.resize(m);
@@ -659,7 +656,6 @@ big_int big_int::karatsuba(const big_int& a, const big_int& b)
     low2.optimise();
     high2.optimise();
 
-    // 7) три рекурсивных произведения (все по Карацубе)
     big_int z0 = karatsuba(low1, low2);
     big_int z2 = karatsuba(high1, high2);
 
@@ -668,14 +664,11 @@ big_int big_int::karatsuba(const big_int& a, const big_int& b)
 
     big_int z1 = karatsuba(sum1, sum2) - z0 - z2;
 
-    // 8) соберём результат: z2·B^(2m) + z1·B^m + z0
     res = z0;
     res.plus_assign(z1, m);
     res.plus_assign(z2, 2 * m);
     res.optimise();
     return res;
-
-    // 9) восстановим знак и оптимизируем
 }
 
 big_int &big_int::divide_assign(const big_int &other, big_int::division_rule rule) &
