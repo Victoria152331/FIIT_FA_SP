@@ -17,6 +17,6 @@ int main() {
     msg.msg_type = 4;
     strcpy(msg.msg_text, "kill");
     msgsnd(msgid, &msg, 5, 0);
-    //msgctl(msgid, IPC_RMID, NULL);
+    msgctl(msgid, IPC_RMID, NULL);
     return 0;
 }
