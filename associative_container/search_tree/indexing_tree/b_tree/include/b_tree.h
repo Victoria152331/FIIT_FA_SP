@@ -541,7 +541,7 @@ B_tree<tkey, tvalue, compare, t>& B_tree<tkey, tvalue, compare, t>::operator=(B_
 
 // region iterators implementation
 
-    // + btree_iterator
+    // btree_iterator
 
 template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
 B_tree<tkey, tvalue, compare, t>::btree_iterator::btree_iterator(
@@ -725,7 +725,7 @@ size_t B_tree<tkey, tvalue, compare, t>::btree_iterator::index() const noexcept
     return _index;
 }
 
-    // + btree_const_iterator
+    // btree_const_iterator
 
 template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
 B_tree<tkey, tvalue, compare, t>::btree_const_iterator::btree_const_iterator(
@@ -1413,30 +1413,6 @@ typename B_tree<tkey, tvalue, compare, t>::btree_const_iterator B_tree<tkey, tva
         
     }
     return end();
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
-typename B_tree<tkey, tvalue, compare, t>::btree_iterator B_tree<tkey, tvalue, compare, t>::lower_bound(const tkey& key)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t> typename B_tree<tkey, tvalue, compare, t>::btree_iterator B_tree<tkey, tvalue, compare, t>::lower_bound(const tkey& key)", "your code should be here...");
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
-typename B_tree<tkey, tvalue, compare, t>::btree_const_iterator B_tree<tkey, tvalue, compare, t>::lower_bound(const tkey& key) const
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t> typename B_tree<tkey, tvalue, compare, t>::btree_const_iterator B_tree<tkey, tvalue, compare, t>::lower_bound(const tkey& key) const", "your code should be here...");
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
-typename B_tree<tkey, tvalue, compare, t>::btree_iterator B_tree<tkey, tvalue, compare, t>::upper_bound(const tkey& key)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t> typename B_tree<tkey, tvalue, compare, t>::btree_iterator B_tree<tkey, tvalue, compare, t>::upper_bound(const tkey& key)", "your code should be here...");
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
-typename B_tree<tkey, tvalue, compare, t>::btree_const_iterator B_tree<tkey, tvalue, compare, t>::upper_bound(const tkey& key) const
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t> typename B_tree<tkey, tvalue, compare, t>::btree_const_iterator B_tree<tkey, tvalue, compare, t>::upper_bound(const tkey& key) const", "your code should be here...");
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare, std::size_t t>
