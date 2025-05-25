@@ -286,8 +286,29 @@ std::pair<size_t, bool> B_tree_disk<tkey, tvalue, compare, t>::find_index(const 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 void B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node::serialize(std::fstream &stream, std::fstream& stream_for_data) const
 {
+  // 1. Write metadata
+  stream.write(reinterpret_cast<const char*>(&position_in_disk), sizeof(position_in_disk));
+  stream.write(reinterpret_cast<const char*>(&_is_leaf), sizeof(_is_leaf));
+  stream.write(reinterpret_cast<const char*>(&size), sizeof(size));
+  
+  // 2. Serialize keys and collect payload offsets
+  std::vector<size_t> data_offsets;
+  for (const auto& kv : keys) {
+      kv.first.serialize(stream);
+      size_t offset = static_cast<size_t>(stream_for_data.tellp());
+      data_offsets.push_back(offset);
+      kv.second.serialize(stream_for_data);
+  }
 
+  // 3. Write payload offsets into tree file
+  for (size_t off : data_offsets) {
+      stream.write(reinterpret_cast<const char*>(&off), sizeof(off));
+  }
 
+  // 4. Write child pointers (size+1 entries)
+  for (size_t ptr : pointers) {
+      stream.write(reinterpret_cast<const char*>(&ptr), sizeof(ptr));
+  }
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
@@ -299,7 +320,33 @@ void B_tree_disk<tkey, tvalue, compare, t>::disk_write(btree_disk_node& node)
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node::deserialize(std::fstream &stream, std::fstream& stream_for_data)
 {
+    btree_disk_node node;
 
+    // 1. Read metadata
+    stream.read(reinterpret_cast<char*>(&node.position_in_disk), sizeof(node.position_in_disk));
+    stream.read(reinterpret_cast<char*>(&node._is_leaf), sizeof(node._is_leaf));
+    stream.read(reinterpret_cast<char*>(&node.size), sizeof(node.size));
+
+    // 2. Read keys and payload offsets
+    node.keys.resize(node.size);
+    std::vector<size_t> data_offsets(node.size);
+    for (size_t i = 0; i < node.size; ++i) {
+        node.keys[i].first = tkey::deserialize(stream);
+        tree_stream.read(reinterpret_cast<char*>(&data_offsets[i]), sizeof(size_t));
+    }
+
+    // 3. Read values from data file
+    for (size_t i = 0; i < node.size; ++i) {
+        stream_for_data.seekg(static_cast<std::streamoff>(data_offsets[i]));
+        node.keys[i].second = tvalue::deserialize(stream_for_data);
+    }
+
+    // 4. Read child pointers
+    node.pointers.resize(node.size + 1);
+    for (size_t i = 0; i < node.size + 1; ++i) {
+        tree_stream.read(reinterpret_cast<char*>(&node.pointers[i]), sizeof(size_t));
+    }
+    return node;
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
@@ -325,11 +372,13 @@ template<serializable tkey, serializable tvalue, compator<tkey> compare, std::si
 bool B_tree_disk<tkey, tvalue, compare, t>::compare_pairs(const B_tree_disk::tree_data_type &lhs,
                                                           const B_tree_disk::tree_data_type &rhs) const
 {
+    return compare_keys(lhs.first, rhs.first);
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 bool B_tree_disk<tkey, tvalue, compare, t>::compare_keys(const tkey &lhs, const tkey &rhs) const
 {
+    return compare::operator()(lhs, rhs);
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
@@ -338,8 +387,49 @@ size_t B_tree_disk<tkey, tvalue, compare, t>::_count_of_node = 0;
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 B_tree_disk<tkey, tvalue, compare, t>::B_tree_disk(const std::string& file_path, const compare& cmp, void* logger):  compare(cmp)
 {
+    std::string tree_name = file_path + ".tree";
+    std::string data_name = file_path + ".data";
+    
+    // Try open existing
+    _file_for_tree.open(tree_name, std::ios::in | std::ios::out | std::ios::binary);
+    _file_for_key_value.open(data_name, std::ios::in | std::ios::out | std::ios::binary);
 
+
+    if (!_file_for_tree.is_open() || !_file_for_key_value.is_open()) {
+        // Create fresh files
+        _file_for_tree.open(tree_name, std::ios::out | std::ios::binary | std::ios::trunc);
+        _file_for_key_value.open(data_name, std::ios::out | std::ios::binary | std::ios::trunc);
+
+
+        // Initialize counters & root
+        _count_of_node = 0;
+        btree_disk_node root(true);
+        root.position_in_disk = ++_count_of_node;
+        root.size = 0;
+        root.pointers.clear();
+
+
+        // Write header placeholder
+        _file_for_tree.write(reinterpret_cast<char*>(&_position_root), sizeof(_position_root));
+        _file_for_tree.write(reinterpret_cast<char*>(&_count_of_node), sizeof(_count_of_node));
+
+
+        // Serialize initial root
+        root.serialize(_file_for_tree, _file_for_key_value);
+
+
+        // Save real root position
+        _position_root = root.position_in_disk;
+        _file_for_tree.seekp(0);
+        _file_for_tree.write(reinterpret_cast<const char*>(&_position_root), sizeof(_position_root));
+    } else {
+        // Load header: root position & node count
+        _file_for_tree.seekg(0);
+        _file_for_tree.read(reinterpret_cast<char*>(&_position_root), sizeof(_position_root));
+        _file_for_tree.read(reinterpret_cast<char*>(&_count_of_node), sizeof(_count_of_node));
+    }
 }
+
 
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
@@ -412,7 +502,8 @@ std::optional<tvalue> B_tree_disk<tkey, tvalue, compare, t>::at(const tkey & key
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
-std::pair<typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator, typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator> B_tree_disk<tkey, tvalue, compare, t>::find_range(const tkey &lower, const tkey &upper, bool include_lower, bool include_upper)
+std::pair<typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator, typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator>
+B_tree_disk<tkey, tvalue, compare, t>::find_range(const tkey &lower, const tkey &upper, bool include_lower, bool include_upper)
 {
 
 }
