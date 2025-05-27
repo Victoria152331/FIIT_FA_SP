@@ -227,14 +227,37 @@ typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node B_tree_disk<tkey
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 bool B_tree_disk<tkey, tvalue, compare, t>::update(const B_tree_disk::tree_data_type &data)
 {
-
+    auto [path, bs_res] = find_path(data.first);
+    auto [index, contain] = bs_res;
+    if (!contain) {
+        return false;
+    }
+    btree_disk_node node = disk_read(path.top().first);
+    node.keys[index] = data;
+    disk_write(node);
+    return true;
 }
 
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 bool B_tree_disk<tkey, tvalue, compare, t>::insert(const B_tree_disk::tree_data_type &data)
 {
+    auto [path, bs_res] = find_path(data.first);
+    auto [index, contain] = bs_res;
+    if (contain) {
+        return false;
+    }
+    btree_disk_node node = disk_read(path.top().first);
+    node.keys.insert(node.keys.begin() + index, data);
+    node.size++;
+    if (node.size <= max_keys) {
+        disk_write(node);
+        return true;
+    }
 
+    //TODO split
+
+    return true;
 }
 
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
@@ -262,11 +285,11 @@ std::pair<std::stack<std::pair<size_t, size_t>>, std::pair<size_t,bool>>  B_tree
         auto bs_res = find_index(key, node);
         
         if (bs_res.second) { // node contains key
-            return {path, {bs_res.first, true}};
+            return {path, bs_res};
         }
 
         if (node._is_leaf) { // return pointer for insert
-            return {path, {bs_res.first, false}};
+            return {path, bs_res};
         }
 
         size_t child_pos = node.pointers[bs_res.first];
@@ -289,9 +312,9 @@ std::pair<size_t, bool> B_tree_disk<tkey, tvalue, compare, t>::find_index(const 
     size_t mid;
     while (low + 1 < high) {
         mid = low + (high - low) / 2;
-        if (compare_keys(key, node.keys[mid - 1].first;)) {
+        if (compare_keys(key, node.keys[mid - 1].first)) {
             high = mid;
-        } else if (compare_keys(node.keys[mid - 1].first;, key)) {
+        } else if (compare_keys(node.keys[mid - 1].first, key)) {
             low = mid;
         } else {
             return {mid - 1, true};
@@ -371,6 +394,7 @@ typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node B_tree_disk<tkey
     size_t offset = header_size + record_size * node_position;
     _file_for_tree.seekg(static_cast<std::streamoff>(offset));
     btree_disk_node node = btree_disk_node::deserialize(_file_for_tree, _file_for_key_value);
+    node.position_in_disk = node_position;
     return node;
 }
 
