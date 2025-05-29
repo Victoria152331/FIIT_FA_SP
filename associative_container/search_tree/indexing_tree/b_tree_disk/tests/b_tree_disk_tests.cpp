@@ -32,6 +32,13 @@ int main() {
         }
     }
 
+    std::cout << "iterator:\n";
+
+    auto e = tree.end();
+    for (auto it = tree.begin(); it != e; it++) {
+        std::cout << "  key " << (*it).first.value << " -> " << (*it).second.value << "\n";
+    }
+
     // Удаляем пару
     bool erased = tree.erase(serializable_int(10));
     std::cout << "\nerase 10: " << (erased ? "success" : "fail") << "\n";
