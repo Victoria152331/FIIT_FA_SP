@@ -19,6 +19,91 @@
 
 #define ROOT 1
 
+
+class serializable_int {
+public:
+    int value;
+
+    serializable_int(int v = 0) : value(v) {}
+
+    void serialize(std::fstream& s) const {
+        s.write(reinterpret_cast<const char*>(&value), sizeof(value));
+    }
+
+    static serializable_int deserialize(std::fstream& s) {
+        int v;
+        s.read(reinterpret_cast<char*>(&v), sizeof(v));
+        return serializable_int(v);
+    }
+
+    size_t serialize_size() const noexcept {
+        return sizeof(value);
+    }
+
+    std::strong_ordering operator<=>(const serializable_int &other) const noexcept
+    {
+        return value <=> other.value;
+    }
+
+    bool operator==(const serializable_int &other) const noexcept
+    {
+        return value == other.value;
+    }
+
+    bool operator!=(const serializable_int &other) const noexcept
+    {
+        return value != other.value;
+    }
+};
+
+
+class serializable_string {
+public:
+    std::string value;
+
+    serializable_string(const std::string& s = "") : value(s) {}
+
+    void serialize(std::fstream& s) const {
+        size_t k = value.size();
+        s.write(reinterpret_cast<const char*>(&k), sizeof(k));
+        if (k > 0) {
+            s.write(value.data(), k);
+        }
+    }
+
+    static serializable_string deserialize(std::fstream& s) {
+        size_t k;
+        s.read(reinterpret_cast<char*>(&k), sizeof(k));
+        std::string str;
+        str.resize(k);
+        if (k > 0) {
+            s.read(str.data(), k);
+        }
+        return serializable_string(str);
+    }
+
+    size_t serialize_size() const noexcept {
+        return sizeof(size_t) + value.size();
+    }
+
+    std::strong_ordering operator<=>(const serializable_string &other) const noexcept
+    {
+        return value <=> other.value;
+    }
+
+    bool operator==(const serializable_string &other) const noexcept
+    {
+        return value == other.value;
+    }
+
+    bool operator!=(const serializable_string &other) const noexcept
+    {
+        return value != other.value;
+    }
+};
+
+
+
 template<typename compare, typename tkey>
 concept compator = requires(const compare c, const tkey& lhs, const tkey& rhs)
 {
@@ -469,7 +554,7 @@ void B_tree_disk<tkey, tvalue, compare, t>::btree_disk_node::serialize(std::fstr
 template<serializable tkey, serializable tvalue, compator<tkey> compare, std::size_t t>
 void B_tree_disk<tkey, tvalue, compare, t>::disk_write(btree_disk_node& node)
 {
-    std::cout << "| write " << node.position_in_disk << " " << static_cast<int>(node._is_leaf) << "\n";
+    // std::cout << "| write " << node.position_in_disk << " " << static_cast<int>(node._is_leaf) << "\n";
     size_t offset = header_size + record_size * (node.position_in_disk - ROOT);
     _file_for_tree.seekp(static_cast<std::streamoff>(offset));
     _file_for_key_value.seekp(0, std::ios::end);
@@ -796,60 +881,3 @@ B_tree_disk<tkey, tvalue, compare, t>::find_range(const tkey &lower, const tkey 
 
 #endif //B_TREE_DISK_HPP
 
-
-class serializable_int {
-public:
-    int value;
-
-    serializable_int(int v = 0) : value(v) {}
-
-    void serialize(std::fstream& s) const {
-        s.write(reinterpret_cast<const char*>(&value), sizeof(value));
-    }
-
-    static serializable_int deserialize(std::fstream& s) {
-        int v;
-        s.read(reinterpret_cast<char*>(&v), sizeof(v));
-        return serializable_int(v);
-    }
-
-    size_t serialize_size() const noexcept {
-        return sizeof(value);
-    }
-
-    std::strong_ordering operator<=>(const serializable_int &other) const noexcept
-    {
-        return value <=> other.value;
-    }
-};
-
-
-class serializable_string {
-public:
-    std::string value;
-
-    serializable_string(const std::string& s = "") : value(s) {}
-
-    void serialize(std::fstream& s) const {
-        size_t k = value.size();
-        s.write(reinterpret_cast<const char*>(&k), sizeof(k));
-        if (k > 0) {
-            s.write(value.data(), k);
-        }
-    }
-
-    static serializable_string deserialize(std::fstream& s) {
-        size_t k;
-        s.read(reinterpret_cast<char*>(&k), sizeof(k));
-        std::string str;
-        str.resize(k);
-        if (k > 0) {
-            s.read(str.data(), k);
-        }
-        return serializable_string(str);
-    }
-
-    size_t serialize_size() const noexcept {
-        return sizeof(size_t) + value.size();
-    }
-};
