@@ -453,7 +453,27 @@ std::ostream &operator<<(std::ostream &stream, const big_int &value)
 std::istream &operator>>(std::istream &stream, big_int &value)
 {
     std::string str;
-    stream >> str;
+    char c;
+    stream.get(c);
+    if ((c == '-') || (c == '+') ||
+        (c >= '0' && c <= '9') ||
+        (c >= 'A' && c <= 'Z') ||
+        (c >= 'a' && c <= 'z'))
+    {
+        str.push_back(c);
+    }
+
+    while (stream.get(c)) {
+        if ((c >= '0' && c <= '9') ||
+            (c >= 'A' && c <= 'Z') ||
+            (c >= 'a' && c <= 'z'))
+        {
+            str.push_back(c);
+        } else {
+            stream.unget();
+            break;
+        }
+    }
     value = big_int(str);
     return stream;
 }
