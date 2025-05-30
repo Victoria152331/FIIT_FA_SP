@@ -2,38 +2,77 @@
 
 void fraction::optimise()
 {
-    throw not_implemented("void fraction::optimise()", "your code should be here...");
+    if (_numerator == big_int(0)) {
+        _denominator = big_int(1);
+        return;
+    }
+
+    big_int a = _numerator;
+    if (_numerator < big_int(0)) {
+        a = big_int(0) - _numerator;
+    }
+    big_int b = _denominator;
+    if (_denominator < big_int(0)) {
+        b = big_int(0) - _denominator
+    }
+
+    while (b != big_int(0)) {
+        big_int r = a % b;
+        a = b;
+        b = r;
+    }
+    
+    _numerator   /= a;
+    _denominator /= a;
+
+    if (_denominator < big_int(0)) {
+        _numerator   = big_int(0) - _numerator;
+        _denominator = big_int(0) - _denominator;
+    }
+
 }
 
 template<std::convertible_to<big_int> f, std::convertible_to<big_int> s>
 fraction::fraction(f &&numerator, s &&denominator)
+    : _numerator(numerator)
+    , _denominator(denominator)
 {
-    throw not_implemented("template<std::convertible_to<big_int> f, std::convertible_to<big_int> s> fraction::fraction(f &&, s &&)", "your code should be here...");
+    optimise();
 }
 
-fraction::fraction(pp_allocator<big_int::value_type>)
-{
-    throw not_implemented("fraction::fraction(pp_allocator<big_int::value_type>)", "your code should be here...");
-}
+fraction::fraction(pp_allocator<big_int::value_type> allocator)
+    : _numerator(big_int(0, allocator))
+    , _denominator(big_int(1, allocator))
+{}
 
 fraction &fraction::operator+=(fraction const &other) &
 {
-    throw not_implemented("fraction &fraction::operator+=(fraction const &) &", "your code should be here...");
+    _numerator = (_numerator * other._denominator + other._numerator * _denominator);
+    _denominator *= other._denominator;
+    optimise();
+    return *this;
 }
 
 fraction fraction::operator+(fraction const &other) const
 {
-    throw not_implemented("fraction fraction::operator+(fraction const &) const", "your code should be here...");
+    auto tmp = *this;
+    tmp+-= other;
+    return tmp;
 }
 
 fraction &fraction::operator-=(fraction const &other) &
 {
-    throw not_implemented("fraction &fraction::operator-=(fraction const &) &", "your code should be here...");
+    _numerator = (_numerator * other._denominator - other._numerator * _denominator);
+    _denominator *= other._denominator;
+    optimise();
+    return *this;
 }
 
 fraction fraction::operator-(fraction const &other) const
 {
-    throw not_implemented("fraction fraction::operator-(fraction const &) const", "your code should be here...");
+    auto tmp = *this;
+    tmp -= other;
+    return tmp;
 }
 
 fraction &fraction::operator*=(fraction const &other) &
@@ -68,12 +107,12 @@ fraction fraction::operator/(fraction const &other) const
 
 bool fraction::operator==(fraction const &other) const noexcept
 {
-    throw not_implemented("bool fraction::operator==(fraction const &) const noexcept", "your code should be here...");
+    return (_numerator == other._numerator) && (_denominator == other._denominator)
 }
 
 std::partial_ordering fraction::operator<=>(const fraction& other) const noexcept
 {
-    throw not_implemented("std::partial_ordering fraction::operator<=>(const fraction& ) const noexcept", "your code should be here...");
+    return (_numerator * other._denominator) <=> (other_numerator * _denominator)
 }
 
 std::ostream &operator<<(std::ostream &stream, fraction const &obj)

@@ -293,7 +293,7 @@ bool B_tree_disk<tkey, tvalue, compare, t>::erase(const tkey& key)
         if (node.position_in_disk == ROOT) {
             if (node.size == 0) {
                 btree_disk_node new_root = disk_read(node.pointers[0]);
-                new_root.position_in_disk = 0;
+                new_root.position_in_disk = ROOT;
                 node = new_root;
             }
             break;
@@ -876,8 +876,33 @@ template<serializable tkey, serializable tvalue, compator<tkey> compare, std::si
 std::pair<typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator, typename B_tree_disk<tkey, tvalue, compare, t>::btree_disk_const_iterator>
 B_tree_disk<tkey, tvalue, compare, t>::find_range(const tkey &lower, const tkey &upper, bool include_lower, bool include_upper)
 {
-    
+    auto it_lower = begin();
+    for (; it_lower != end(); ++it_lower) {
+        auto key = (*it_lower).first;
+        // если включаем lower: ищем первый key >= lower
+        // иначе: ищем первый key > lower
+        if (include_lower) {
+            if (!compare_keys(key, lower)) break;
+        } else {
+            if ( compare_keys(lower, key)) break;
+        }
+    }
+
+    auto it_upper = it_lower;
+    for (; it_upper != end(); ++it_upper) {
+        const auto &key = (*it_upper).first;
+        // если включаем upper: пока key <= upper
+        // иначе: пока key < upper
+        if (include_upper) {
+            if ( compare_keys(upper, key)) break;  // key > upper
+        } else {
+            if (!compare_keys(key, upper)) break;  // key >= upper
+        }
+    }
+
+    return {it_lower, it_upper};
 }
+
 
 #endif //B_TREE_DISK_HPP
 
