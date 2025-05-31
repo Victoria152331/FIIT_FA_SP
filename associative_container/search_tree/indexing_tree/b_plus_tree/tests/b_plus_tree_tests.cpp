@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+
 #include <list>
 #include <random>
 #include <vector>
@@ -8,31 +9,38 @@
 
 
 
+
+
+
 template<typename tkey, typename tvalue>
 bool compare_results(
-        std::vector<typename BP_tree<tkey, tvalue>::value_type> const &expected,
-        std::vector<typename BP_tree<tkey, tvalue>::value_type> const &actual)
+        std::vector<std::pair<tkey, tvalue>> const &expected,
+        std::vector<std::pair<tkey, tvalue>> const &actual)
 {
     if (expected.size() != actual.size())
     {
         return false;
     }
 
+
     for (size_t i = 0; i < expected.size(); ++i)
     {
-        if (expected[i].key != actual[i].key)
+        if (expected[i].first != actual[i].first)
         {
             return false;
         }
 
-        if (expected[i].value != actual[i].value)
+
+        if (expected[i].second != actual[i].second)
         {
             return false;
         }
     }
 
+
     return true;
 }
+
 
 template<typename tvalue>
 bool compare_obtain_results(
@@ -44,16 +52,21 @@ bool compare_obtain_results(
         return false;
     }
 
+
     for (size_t i = 0; i < expected.size(); ++i)
     {
+        std::cout << expected[i] << " " << actual[i] << std::endl;
+
         if (expected[i] != actual[i])
         {
             return false;
         }
     }
 
+
     return true;
 }
+
 
 logger *create_logger(
         std::vector<std::pair<std::string, logger::severity>> const &output_file_streams_setup,
@@ -62,20 +75,25 @@ logger *create_logger(
 {
     std::unique_ptr<logger_builder> builder(new client_logger_builder());
 
+
     if (use_console_stream)
     {
         builder->add_console_stream(console_stream_severity);
     }
+
 
     for (auto &output_file_stream_setup: output_file_streams_setup)
     {
         builder->add_file_stream(output_file_stream_setup.first, output_file_stream_setup.second);
     }
 
+
     logger *built_logger = builder->build();
+
 
     return built_logger;
 }
+
 
 template <typename tkey, typename tvalue>
 struct test_data
@@ -84,8 +102,10 @@ struct test_data
     tvalue value;
     size_t index;
 
+
     test_data(size_t i, tkey k, tvalue v) : index(i), key(k), value(v) {}
 };
+
 
 template<typename tkey, typename tvalue, typename comp, size_t t>
 bool infix_const_iterator_test(
@@ -94,21 +114,30 @@ bool infix_const_iterator_test(
 {
     auto end_infix = tree.cend();
     auto it = tree.cbegin();
-
+    
     for (auto const &item: expected_result)
     {
         auto data = *it;
+        std::cout << it->first << " " << item.key << "   ";
+        std::cout << it->second << " " << item.value << "   ";
+        std::cout << it.index() << " " << item.index << std::endl;
+
 
         if (it->first != item.key || it->second != item.value || it.index() != item.index)
         {
+            
             return false;
         }
+
 
         ++it;
     }
 
-return true;
+
+    if (it != end_infix) return false;
+    return true;
 }
+
 
 TEST(bTreePositiveTests, test0)
 {
@@ -117,19 +146,26 @@ TEST(bTreePositiveTests, test0)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test0 started");
+
 
     std::vector<test_data<int, std::string>> expected_result =
             {
 
+
             };
+
 
     BP_tree<int, std::string, std::less<int>, 1024> tree(std::less<int>(), nullptr, logger.get());
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     logger->trace("bTreePositiveTests.test0 finished");
 }
+
 
 TEST(bTreePositiveTests, test1)
 {
@@ -138,19 +174,27 @@ TEST(bTreePositiveTests, test1)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test1 started");
 
+
+    // For B+ tree with t=3 (maximum 5 keys per leaf), inserting 6 elements splits into two leaves:
+    // leaf0: [1:a, 2:b, 3:d], leaf1: [4:e, 15:c, 27:f]
+    // Indices are position within each leaf
     std::vector<test_data<int, std::string>> expected_result =
             {
                     test_data<int, std::string>(0, 1, "a"),
                     test_data<int, std::string>(1, 2, "b"),
                     test_data<int, std::string>(2, 3, "d"),
                     test_data<int, std::string>(0, 4, "e"),
-                    test_data<int, std::string>(0, 15, "c"),
-                    test_data<int, std::string>(1, 27, "f")
+                    test_data<int, std::string>(1, 15, "c"),
+                    test_data<int, std::string>(2, 27, "f")
             };
 
+
     BP_tree<int, std::string, std::less<int>, 3> tree(std::less<int>(), nullptr, logger.get());
+
+    std::cout << "hello\n";
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -159,10 +203,14 @@ TEST(bTreePositiveTests, test1)
     tree.emplace(4, std::string("e"));
     tree.emplace(27, std::string("f"));
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
+    std::cout << "hello\n";
 
     logger->trace("bTreePositiveTests.test1 finished");
 }
+
 
 TEST(bTreePositiveTests, test2)
 {
@@ -171,8 +219,14 @@ TEST(bTreePositiveTests, test2)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test2 started");
 
+
+    // For B+ tree with t=5 (maximum 9 keys per leaf), inserting 12 elements:
+    // leaf0: [1:a, 2:b, 3:d, 4:e, 15:c]
+    // leaf1: [24:g, 45:k, 100:f, 101:j, 193:l, 456:h, 534:m]
+    // Indices reflect position within each leaf
     std::vector<test_data<int, std::string>> expected_result =
             {
                     test_data<int, std::string>(0, 1, "a"),
@@ -181,15 +235,17 @@ TEST(bTreePositiveTests, test2)
                     test_data<int, std::string>(3, 4, "e"),
                     test_data<int, std::string>(4, 15, "c"),
                     test_data<int, std::string>(0, 24, "g"),
-                    test_data<int, std::string>(0, 45, "k"),
-                    test_data<int, std::string>(1, 100, "f"),
-                    test_data<int, std::string>(2, 101, "j"),
-                    test_data<int, std::string>(3, 193, "l"),
-                    test_data<int, std::string>(4, 456, "h"),
-                    test_data<int, std::string>(5, 534, "m")
+                    test_data<int, std::string>(1, 45, "k"),
+                    test_data<int, std::string>(2, 100, "f"),
+                    test_data<int, std::string>(3, 101, "j"),
+                    test_data<int, std::string>(4, 193, "l"),
+                    test_data<int, std::string>(5, 456, "h"),
+                    test_data<int, std::string>(6, 534, "m")
             };
 
+
     BP_tree<int, std::string, std::less<int>, 5> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -204,10 +260,13 @@ TEST(bTreePositiveTests, test2)
     tree.emplace(193, std::string("l"));
     tree.emplace(534, std::string("m"));
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     logger->trace("bTreePositiveTests.test2 finished");
 }
+
 
 TEST(bTreePositiveTests, test3)
 {
@@ -216,8 +275,13 @@ TEST(bTreePositiveTests, test3)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test3 started");
 
+
+    // For B+ tree with t=7 (maximum 13 keys per leaf), inserting 12 elements fits all in one leaf:
+    // leaf: [1:a, 2:b, 3:d, 4:e, 15:c, 24:g, 45:k, 100:f, 101:j, 193:l, 456:h, 534:m]
+    // Indices 0..11
     std::vector<test_data<int, std::string>> expected_result =
             {
                     test_data<int, std::string>(0, 1, "a"),
@@ -234,7 +298,9 @@ TEST(bTreePositiveTests, test3)
                     test_data<int, std::string>(11, 534, "m")
             };
 
+
     BP_tree<int, std::string, std::less<int>, 7> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -249,10 +315,13 @@ TEST(bTreePositiveTests, test3)
     tree.emplace(193, std::string("l"));
     tree.emplace(534, std::string("m"));
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     logger->trace("bTreePositiveTests.test3 finished");
 }
+
 
 TEST(bTreePositiveTests, test4)
 {
@@ -261,25 +330,33 @@ TEST(bTreePositiveTests, test4)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test4 started");
 
+
+    // For B+ tree with t=3 (maximum 5 keys per leaf), inserting 12 elements results in three leaves:
+    // leaf0: [1:a, 2:b, 3:d]              -> indices 0,1,2
+    // leaf1: [4:e, 15:c, 24:g, 45:k]      -> indices 0,1,2,3
+    // leaf2: [100:f, 101:j, 193:l, 456:h, 534:m] -> indices 0,1,2,3,4
     std::vector<test_data<int, std::string>> expected_result =
             {
                     test_data<int, std::string>(0, 1, "a"),
                     test_data<int, std::string>(1, 2, "b"),
                     test_data<int, std::string>(2, 3, "d"),
                     test_data<int, std::string>(0, 4, "e"),
-                    test_data<int, std::string>(0, 15, "c"),
-                    test_data<int, std::string>(1, 24, "g"),
-                    test_data<int, std::string>(2, 45, "k"),
-                    test_data<int, std::string>(1, 100, "f"),
-                    test_data<int, std::string>(0, 101, "j"),
-                    test_data<int, std::string>(1, 193, "l"),
-                    test_data<int, std::string>(2, 456, "h"),
-                    test_data<int, std::string>(3, 534, "m")
+                    test_data<int, std::string>(1, 15, "c"),
+                    test_data<int, std::string>(2, 24, "g"),
+                    test_data<int, std::string>(3, 45, "k"),
+                    test_data<int, std::string>(0, 100, "f"),
+                    test_data<int, std::string>(1, 101, "j"),
+                    test_data<int, std::string>(2, 193, "l"),
+                    test_data<int, std::string>(3, 456, "h"),
+                    test_data<int, std::string>(4, 534, "m")
             };
 
+
     BP_tree<int, std::string, std::less<int>, 3> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -294,10 +371,13 @@ TEST(bTreePositiveTests, test4)
     tree.emplace(193, std::string("l"));
     tree.emplace(534, std::string("m"));
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     logger->trace("bTreePositiveTests.test4 finished");
 }
+
 
 TEST(bTreePositiveTests, test5)
 {
@@ -306,14 +386,19 @@ TEST(bTreePositiveTests, test5)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test5 started");
+
 
     std::vector<test_data<int, std::string>> expected_result =
             {
 
+
             };
 
+
     BP_tree<int, std::string, std::less<int>, 2> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -327,10 +412,13 @@ TEST(bTreePositiveTests, test5)
     tree.erase(2);
     tree.erase(4);
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     logger->trace("bTreePositiveTests.test5 finished");
 }
+
 
 TEST(bTreePositiveTests, test6)
 {
@@ -339,21 +427,34 @@ TEST(bTreePositiveTests, test6)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test6 started");
 
+
+    // For B+ tree with t=4 (maximum 7 keys per leaf), inserting 12 elements and then erasing {1,100,193,24}:
+    // Initial leaves (after inserts):
+    //   leaf0: [1:a, 2:b, 3:d, 4:e]
+    //   leaf1: [15:c, 24:g, 45:k, 100:f]
+    //   leaf2: [101:j, 193:l, 456:h, 534:m]
+    // After erasing 1, 100, 193, 24:
+    //   leaf0 -> [2:b, 3:d, 4:e]              -> indices 0,1,2
+    //   leaf1 -> [15:c, 45:k]                 -> indices 0,1
+    //   leaf2 -> [101:j, 456:h, 534:m]         -> indices 0,1,2
     std::vector<test_data<int, std::string>> expected_result =
             {
                     test_data<int, std::string>(0, 2, "b"),
                     test_data<int, std::string>(1, 3, "d"),
                     test_data<int, std::string>(2, 4, "e"),
                     test_data<int, std::string>(0, 15, "c"),
-                    test_data<int, std::string>(0, 45, "k"),
-                    test_data<int, std::string>(1, 101, "j"),
-                    test_data<int, std::string>(2, 456, "h"),
-                    test_data<int, std::string>(3, 534, "m")
+                    test_data<int, std::string>(1, 45, "k"),
+                    test_data<int, std::string>(0, 101, "j"),
+                    test_data<int, std::string>(1, 456, "h"),
+                    test_data<int, std::string>(2, 534, "m")
             };
 
+
     BP_tree<int, std::string, std::less<int>, 4> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -368,25 +469,31 @@ TEST(bTreePositiveTests, test6)
     tree.emplace(193, std::string("l"));
     tree.emplace(534, std::string("m"));
 
+
     auto first_disposed = std::move(tree.at(1));
     auto second_disposed = std::move(tree.at(100));
     auto third_disposed = std::move(tree.at(193));
     auto fourth_disposed = std::move(tree.at(24));
+
 
     tree.erase(1);
     tree.erase(100);
     tree.erase(193);
     tree.erase(24);
 
+
     EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
+
 
     EXPECT_TRUE(first_disposed == "a");
     EXPECT_TRUE(second_disposed == "f");
     EXPECT_TRUE(third_disposed == "l");
     EXPECT_TRUE(fourth_disposed == "g");
 
+
     logger->trace("bTreePositiveTests.test6 finished");
 }
+
 
 TEST(bTreePositiveTests, test7)
 {
@@ -395,7 +502,9 @@ TEST(bTreePositiveTests, test7)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test7 started");
+
 
     std::vector<std::string> expected_result =
             {
@@ -409,7 +518,9 @@ TEST(bTreePositiveTests, test7)
                     "y"
             };
 
+
     BP_tree<int, std::string, std::less<int>, 5> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::move(std::string("a")));
     tree.emplace(2, std::move(std::string("b")));
@@ -425,6 +536,7 @@ TEST(bTreePositiveTests, test7)
     tree.emplace(534, std::move(std::string("m")));
     tree.emplace(1000, std::move(std::string("y")));
 
+
     std::vector<std::string> actual_result =
             {
                     tree.at(24),
@@ -437,10 +549,13 @@ TEST(bTreePositiveTests, test7)
                     tree.at(1000)
             };
 
+
     EXPECT_TRUE(compare_obtain_results(expected_result, actual_result));
+
 
     logger->trace("bTreePositiveTests.test7 finished");
 }
+
 
 TEST(bTreePositiveTests, test8)
 {
@@ -449,7 +564,9 @@ TEST(bTreePositiveTests, test8)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test8 started");
+
 
     std::vector<std::string> expected_result =
             {
@@ -463,7 +580,9 @@ TEST(bTreePositiveTests, test8)
                     "h"
             };
 
+
     BP_tree<int, std::string, std::less<int>, 4> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -479,6 +598,7 @@ TEST(bTreePositiveTests, test8)
     tree.emplace(534, std::string("m"));
     tree.emplace(1000, std::string("y"));
 
+
     std::vector<std::string> actual_result =
             {
                     tree.at(1000),
@@ -491,10 +611,13 @@ TEST(bTreePositiveTests, test8)
                     tree.at(-456)
             };
 
+
     EXPECT_TRUE(compare_obtain_results(expected_result, actual_result));
+
 
     logger->trace("bTreePositiveTests.test8 finished");
 }
+
 
 TEST(bTreePositiveTests, test9)
 {
@@ -503,19 +626,31 @@ TEST(bTreePositiveTests, test9)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreePositiveTests.test9 started");
 
+
+    // For B+ tree, begin()/end() iteration should yield all keys in sorted order (on leaves):
+    // [1:a, 2:b, 3:d, 4:e, 15:c, 24:g, 45:k, 100:f, 101:j, 193:l, 456:h, 534:m]
     std::vector<BP_tree<int, std::string>::value_type> expected_result =
             {
-                    { 4, "e" },
-                    { 15, "c" },
-                    { 24, "g" },
-                    { 45, "k" },
-                    { 100, "f" },
-                    { 101, "j" },
+                    {1, "a"},
+                    {2, "b"},
+                    {3, "d"},
+                    {4, "e"},
+                    {15, "c"},
+                    {24, "g"},
+                    {45, "k"},
+                    {100, "f"},
+                    {101, "j"},
+                    {193, "l"},
+                    {456, "h"},
+                    {534, "m"}
             };
 
+
     BP_tree<int, std::string, std::less<int>, 5> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -530,14 +665,16 @@ TEST(bTreePositiveTests, test9)
     tree.emplace(193, std::string("l"));
     tree.emplace(534, std::string("m"));
 
-    auto b = tree.begin();
-    auto e = tree.end();
-    std::vector<decltype(tree)::value_type> actual_result(b, e);
 
-    EXPECT_TRUE(compare_obtain_results(expected_result, actual_result));
+    std::vector<decltype(tree)::value_type> actual_result(tree.begin(), tree.end());
+
+
+    EXPECT_TRUE(compare_results(expected_result, actual_result));
+
 
     logger->trace("bTreePositiveTests.test9 finished");
 }
+
 
 TEST(bTreeNegativeTests, test1)
 {
@@ -546,9 +683,12 @@ TEST(bTreeNegativeTests, test1)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreeNegativeTests.test1 started");
 
+
     BP_tree<int, std::string, std::less<int>, 3> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -556,10 +696,13 @@ TEST(bTreeNegativeTests, test1)
     tree.emplace(3, std::string("d"));
     tree.emplace(4, std::string("e"));
 
+
     EXPECT_EQ(tree.erase(45), tree.end());
+
 
     logger->trace("bTreeNegativeTests.test1 finished");
 }
+
 
 TEST(bTreeNegativeTests, test3)
 {
@@ -568,9 +711,12 @@ TEST(bTreeNegativeTests, test3)
                                                                   { "b_tree_tests_logs.txt", logger::severity::trace }
                                                           }));
 
+
     logger->trace("bTreeNegativeTests.test3 started");
 
+
     BP_tree<int, std::string, std::less<int>, 4> tree(std::less<int>(), nullptr, logger.get());
+
 
     tree.emplace(1, std::string("a"));
     tree.emplace(2, std::string("b"));
@@ -586,10 +732,13 @@ TEST(bTreeNegativeTests, test3)
     tree.emplace(534, std::string("m"));
     tree.emplace(1000, std::string("y"));
 
+
     EXPECT_EQ(tree.erase(1001), tree.end());
+
 
     logger->trace("bTreeNegativeTests.test3 finished");
 }
+
 
 int main(
         int argc,
