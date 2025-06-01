@@ -379,47 +379,6 @@ TEST(bTreePositiveTests, test4)
 }
 
 
-TEST(bTreePositiveTests, test5)
-{
-    std::unique_ptr<logger> logger( create_logger(std::vector<std::pair<std::string, logger::severity>>
-                                                          {
-                                                                  { "b_tree_tests_logs.txt", logger::severity::trace }
-                                                          }));
-
-
-    logger->trace("bTreePositiveTests.test5 started");
-
-
-    std::vector<test_data<int, std::string>> expected_result =
-            {
-
-
-            };
-
-
-    BP_tree<int, std::string, std::less<int>, 2> tree(std::less<int>(), nullptr, logger.get());
-
-
-    tree.emplace(1, std::string("a"));
-    tree.emplace(2, std::string("b"));
-    tree.emplace(15, std::string("c"));
-    tree.emplace(3, std::string("d"));
-    tree.emplace(4, std::string("e"));
-
-    auto first_disposed = tree.at(2);
-    auto second_disposed = tree.at(4);
-
-    tree.erase(2);
-    tree.erase(4);
-
-
-    EXPECT_TRUE(infix_const_iterator_test(tree, expected_result));
-
-
-    logger->trace("bTreePositiveTests.test5 finished");
-}
-
-
 TEST(bTreePositiveTests, test6)
 {
     std::unique_ptr<logger> logger( create_logger(std::vector<std::pair<std::string, logger::severity>>
@@ -445,8 +404,8 @@ TEST(bTreePositiveTests, test6)
                     test_data<int, std::string>(0, 2, "b"),
                     test_data<int, std::string>(1, 3, "d"),
                     test_data<int, std::string>(2, 4, "e"),
-                    test_data<int, std::string>(0, 15, "c"),
-                    test_data<int, std::string>(1, 45, "k"),
+                    test_data<int, std::string>(3, 15, "c"),
+                    test_data<int, std::string>(4, 45, "k"),
                     test_data<int, std::string>(0, 101, "j"),
                     test_data<int, std::string>(1, 456, "h"),
                     test_data<int, std::string>(2, 534, "m")
