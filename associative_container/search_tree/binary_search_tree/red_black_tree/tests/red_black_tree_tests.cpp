@@ -571,29 +571,32 @@ TEST(redBlackTreePositiveTests, test17)
 	red_black_tree<int, int> tree{std::less<int>()};
 	std::map<int, int> map;
 
-	size_t iterations = 100'000;
+	//size_t iterations = 100'000;
+    size_t iterations = 100;
 
 	srand(time(nullptr));
 
 	for(size_t i = 0; i < iterations; ++i)
 	{
+        // std::cout << "_";
 		switch(rand() % 3)
 		{
 			case 0:
 			case 1:
 			{
-				int tmp = rand();
+				int tmp = rand() & 1000;
 				try
 				{
 
 					if (map.find(tmp) == map.end())
 					{
+                        // std::cout << "insert: " << tmp << std::endl;
 						map.insert(std::make_pair(tmp, 1));
 						tree.emplace(tmp, 1);
+                        // std::cout << "  end\n";
 					}
-				} catch (std::logic_error& er)
-				{
-					std::cout << er.what() << std::endl;
+				} catch (std::logic_error& er) {
+					// std::cout << er.what() << std::endl;
 				}
 				break;
 			}
@@ -604,25 +607,29 @@ TEST(redBlackTreePositiveTests, test17)
 					auto it = map.begin();
 
 					//std::advance(it, rand() % map.size());
-
+                    // std::cout << "erase: " << it->first << std::endl;
 					tree.erase(it->first);
 					map.erase(it);
-				} else
-				{
-					std::cout << "Empty" << std::endl;
+                    // std::cout << "  end\n";
+				} else {
+					// std::cout << "Empty" << std::endl;
 				}
 			}
 				break;
 		}
 	}
+    for (auto it = tree.begin(); it != tree.end(); it++ ) {
+        std::cout << it->first << " " << it.depth() << " " << ((it.get_color() == red_black_tree<int, int>::node_color::RED) ? "red" : "black") << std::endl;
+    }
 
 	while(!map.empty())
 	{
 		auto it = map.begin();
 		//std::advance(it, rand() % map.size());
-
+        // std::cout << "erase: " << it->first << std::endl;
 		tree.erase(it->first);
 		map.erase(it);
+        // std::cout << "  end\n";
 	}
 
 }

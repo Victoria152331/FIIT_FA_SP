@@ -23,7 +23,7 @@ namespace __detail
         //Does not invalidate node*
         static void post_insert(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**);
 
-        static void erase(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**);
+        static void erase(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**, int ind);
 
         static void swap(binary_search_tree<tkey, tvalue, compare, RB_TAG>& lhs, binary_search_tree<tkey, tvalue, compare, RB_TAG>& rhs) noexcept;
     };
@@ -627,8 +627,10 @@ namespace __detail {
         node_RB* pr = static_cast<node_RB*>(cur->parent);
         node_RB *un, *gr;
 
+        // std::cout << "h1\n";
 
         while (pr->color == node_color::RED) {
+            // std::cout << "h2\n";
             gr = static_cast<node_RB*>(pr->parent);
             node_BST** link_gr = nullptr;
             if (gr->parent == nullptr) {
@@ -640,8 +642,10 @@ namespace __detail {
             }
 
             if (static_cast<node_RB*>(gr->left_subtree) == pr) {
+                // std::cout << "h31\n";
                 un = static_cast<node_RB*>(gr->right_subtree);
                 if (un == nullptr || un->color == node_color::BLACK) {
+                    // std::cout << "h411\n";
                     if (cur == static_cast<node_RB*>(pr->right_subtree)) {
                         binary_search_tree<tkey, tvalue, compare, RB_TAG>::small_left_rotation(gr->left_subtree);
                         std::swap(cur, pr);
@@ -650,6 +654,7 @@ namespace __detail {
                     gr->color = node_color::RED;
                     binary_search_tree<tkey, tvalue, compare, RB_TAG>::small_right_rotation(*link_gr);
                 } else {
+                    // std::cout << "h412\n";
                     pr->color = node_color::BLACK;
                     gr->color = node_color::RED;
                     un->color = node_color::BLACK;
@@ -661,8 +666,10 @@ namespace __detail {
                     pr = static_cast<node_RB*>(cur->parent);
                 }
             } else {
+                // std::cout << "h32\n";
                 un = static_cast<node_RB*>(gr->left_subtree);
                 if (un == nullptr || un->color == node_color::BLACK) {
+                    // std::cout << "h421\n";
                     if (cur == static_cast<node_RB*>(pr->left_subtree)) {
                         binary_search_tree<tkey, tvalue, compare, RB_TAG>::small_right_rotation(gr->right_subtree);
                         std::swap(cur, pr);
@@ -671,6 +678,7 @@ namespace __detail {
                     gr->color = node_color::RED;
                     binary_search_tree<tkey, tvalue, compare, RB_TAG>::small_left_rotation(*link_gr);
                 } else {
+                    // std::cout << "h422\n";
                     pr->color = node_color::BLACK;
                     gr->color = node_color::RED;
                     un->color = node_color::BLACK;
@@ -688,9 +696,198 @@ namespace __detail {
     template<typename tkey, typename tvalue, typename compare>
     void bst_impl<tkey, tvalue, compare, RB_TAG>::erase(
             binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont,
-            typename binary_search_tree<tkey, tvalue, compare, RB_TAG>::node** n)
+            typename binary_search_tree<tkey, tvalue, compare, RB_TAG>::node** link, int ind)
     {
-        throw not_implemented("template<typename tkey, typename tvalue, typename compare> void bst_impl<tkey, tvalue, compare, RB_TAG>::erase(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, typename binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**)", "your code should be here...");
+        using BST = binary_search_tree<tkey, tvalue, compare, RB_TAG>;
+        using node_RB = typename red_black_tree<tkey,tvalue,compare>::node;
+        using node_BST = typename binary_search_tree<tkey, tvalue, compare, RB_TAG>::node;
+        using node_color = red_black_tree<tkey,tvalue,compare>::node_color;
+
+        node_BST* to_del = *link;
+        node_color del_color = static_cast<node_RB*>(to_del)->color;
+        
+        if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
+            *link = nullptr;
+        } 
+        else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
+
+            *link = to_del->right_subtree;
+            to_del->right_subtree->parent = to_del->parent;
+        } 
+        else if ((to_del->left_subtree != nullptr) && (to_del->right_subtree == nullptr)) {
+
+            *link = to_del->left_subtree;
+            to_del->left_subtree->parent = to_del->parent;
+        } else {
+
+            node_BST* to_swap = to_del->left_subtree;
+
+            if (to_swap->right_subtree == nullptr) {
+                ind = 1;
+                to_swap->parent = to_del->parent;
+                *link = to_swap;
+                to_swap->right_subtree = to_del->right_subtree;
+                to_del->right_subtree->parent = to_swap;
+                to_del->parent = to_swap;
+            } else {
+
+                while (to_swap->right_subtree != nullptr) {
+                    to_swap = to_swap->right_subtree;
+                }
+                ind = 2;
+                to_swap->parent->right_subtree = to_swap->left_subtree;
+                if (to_swap->left_subtree) {
+                    to_swap->left_subtree->parent = to_swap->parent;
+                }
+        
+                std::swap(to_swap->left_subtree, to_del->left_subtree);
+                std::swap(to_swap->right_subtree, to_del->right_subtree);
+                std::swap(to_swap->parent, to_del->parent);
+                std::swap(static_cast<node_RB*>(to_swap)->color,
+                          static_cast<node_RB*>(to_del)->color);
+        
+                *link = to_swap;
+        
+                to_swap->left_subtree->parent = to_swap;
+                to_swap->right_subtree->parent = to_swap;
+            }
+        }
+        // std::cout << "h1\n";
+        if (del_color == node_color::RED) {
+            __detail::bst_impl<tkey, tvalue, compare, RB_TAG>::delete_node(cont, to_del);
+            return;
+        }
+
+        node_RB* cur = static_cast<node_RB*>(*link);
+        node_RB* pr = static_cast<node_RB*>(to_del->parent);
+
+        if (pr == nullptr && cur != nullptr) {
+            cur->color = node_color::BLACK;
+        }
+
+        node_RB *br, *br_left, *br_right;
+        node_BST** pr_link;
+
+        while (pr != nullptr) {
+            // std::cout << "h2\n";
+            if (pr->parent == nullptr) {
+                pr_link = &(cont._root);
+            } else if (pr->parent->left_subtree == static_cast<node_BST*>(pr)) {
+                pr_link = &(pr->parent->left_subtree);
+            } else {
+                pr_link = &(pr->parent->right_subtree);
+            }
+
+            if ((cur != nullptr) && (cur->color == node_color::RED)) {
+                // std::cout << "h21\n";
+                cur->color = node_color::BLACK;
+                break;
+            }
+
+            if (pr->left_subtree == static_cast<node_BST*>(cur)) {
+                // std::cout << "h31\n";
+                br = static_cast<node_RB*>(pr->right_subtree);
+                if (br == nullptr) {
+                    break; // invalid situation
+                }
+                if (br->color == node_color::RED) {
+                    // std::cout << "h311\n";
+                    pr->color = node_color::RED;
+                    br->color = node_color::BLACK;
+                    BST::small_left_rotation(*pr_link);
+                    br = static_cast<node_RB*>(pr->right_subtree);
+                }
+                // std::cout << "h41\n";
+                if (br == nullptr) {
+                    br_left = nullptr;
+                    br_right = nullptr;
+                } else {
+                    br_left = static_cast<node_RB*>(br->left_subtree);
+                    br_right = static_cast<node_RB*>(br->right_subtree);
+                }
+                bool left_black = (br_left == nullptr)
+                    || (br_left->color == node_color::BLACK);
+                bool right_black = (br_right == nullptr)
+                    || (br_right->color == node_color::BLACK);
+
+                if (left_black && right_black) {
+                    // std::cout << "h511\n";
+                    if(br) br->color = node_color::RED;
+                    cur = pr;
+                    pr = static_cast<node_RB*>(cur->parent);
+                    if (pr == nullptr) {
+                        cur->color = node_color::BLACK;
+                    }
+                } else {
+                    // std::cout << "h512\n";
+                    if (right_black) {
+                        br->color = node_color::RED;
+                        br_left->color = node_color::BLACK;
+                        BST::small_right_rotation(pr->right_subtree);
+                        br = static_cast<node_RB*>(pr->right_subtree);
+                        br_left = static_cast<node_RB*>(br->left_subtree);
+                        br_right = static_cast<node_RB*>(br->right_subtree);
+                    }
+                    br->color = pr->color;
+                    pr->color = node_color::BLACK;
+                    br_right->color = node_color::BLACK;
+                    BST::small_left_rotation(*pr_link);
+                    break;
+                }
+            } else {
+                // std::cout << "h32\n";
+                br = static_cast<node_RB*>(pr->left_subtree);
+                if (br == nullptr) {
+                    break; // invalid situation
+                }
+                if (br->color == node_color::RED) {
+                    // std::cout << "h321\n";
+                    pr->color = node_color::RED;
+                    br->color = node_color::BLACK;
+                    BST::small_right_rotation(*pr_link);
+                    br = static_cast<node_RB*>(pr->left_subtree);
+                }
+                // std::cout << "h42\n";
+                if (br == nullptr) {
+                    br_left = nullptr;
+                    br_right = nullptr;
+                } else {
+                    br_left = static_cast<node_RB*>(br->left_subtree);
+                    br_right = static_cast<node_RB*>(br->right_subtree);
+                }
+                bool left_black = (br_left == nullptr)
+                    || (br_left->color == node_color::BLACK);
+                bool right_black = (br_right == nullptr)
+                    || (br_right->color == node_color::BLACK);
+
+                if (left_black && right_black) {
+                    // std::cout << "h521\n";
+                    if (br) br->color = node_color::RED;
+                    cur = pr;
+                    pr = static_cast<node_RB*>(cur->parent);
+                    if (pr == nullptr) {
+                        cur->color = node_color::BLACK;
+                    }
+                } else {
+                    // std::cout << "h522\n";
+                    if (left_black) {
+                        br->color = node_color::RED;
+                        br_right->color = node_color::BLACK;
+                        BST::small_left_rotation(pr->left_subtree);
+                        br = static_cast<node_RB*>(pr->left_subtree);
+                        br_left = static_cast<node_RB*>(br->left_subtree);
+                        br_right = static_cast<node_RB*>(br->right_subtree);
+                    }
+                    br->color = pr->color;
+                    pr->color = node_color::BLACK;
+                    br_right->color = node_color::BLACK;
+                    BST::small_right_rotation(*pr_link);
+                    break;
+                }
+            }
+        }
+        // std::cout << "hhh\n";
+        __detail::bst_impl<tkey, tvalue, compare, RB_TAG>::delete_node(cont, to_del);
     }
 
     template<typename tkey, typename tvalue, typename compare>

@@ -941,7 +941,7 @@ namespace __detail
         //Does not invalidate node*
         static void post_insert(binary_search_tree<tkey, tvalue, compare, tag>& cont, binary_search_tree<tkey, tvalue, compare, tag>::node**){}
 
-        static void erase(binary_search_tree<tkey, tvalue, compare, tag>& cont, binary_search_tree<tkey, tvalue, compare, tag>::node**);
+        static void erase(binary_search_tree<tkey, tvalue, compare, tag>& cont, binary_search_tree<tkey, tvalue, compare, tag>::node**, int ind);
 
         static void swap(binary_search_tree<tkey, tvalue, compare, tag>& lhs, binary_search_tree<tkey, tvalue, compare, tag>& rhs) noexcept;
     };
@@ -2922,66 +2922,25 @@ binary_search_tree<tkey, tvalue, compare, tag>::erase(infix_iterator pos)
 
     node** link = nullptr;
     node* target = nullptr;
+    int ind;
 
     if (to_del->parent == nullptr) {
         link = &_root;
         target = _root;
+        ind = 0;
     } else if (to_del->parent->left_subtree == to_del) {
         link = &(to_del->parent->left_subtree);
         target = to_del->parent;
+        ind = 1;
     } else {
         link = &(to_del->parent->right_subtree);
         target = to_del->parent;
+        ind = 2;
     }
 
-    if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
-        *link = nullptr;
-    } 
-    else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
-
-        *link = to_del->right_subtree;
-        to_del->right_subtree->parent = to_del->parent;
-    } 
-    else if ((to_del->left_subtree != nullptr) && (to_del->right_subtree == nullptr)) {
-
-        *link = to_del->left_subtree;
-        to_del->left_subtree->parent = to_del->parent;
-    }
-    else {
-
-        node* to_swap = to_del->left_subtree;
-
-        if (to_swap->right_subtree == nullptr) {
-            target = to_swap;
-            to_swap->parent = to_del->parent;
-            *link = to_swap;
-            to_swap->right_subtree = to_del->right_subtree;
-            to_del->right_subtree->parent = to_swap;
-        } else {
-
-            while (to_swap->right_subtree != nullptr) {
-                to_swap = to_swap->right_subtree;
-            }
     
-            target = to_swap->parent;
-            to_swap->parent->right_subtree = to_swap->left_subtree;
-            if (to_swap->left_subtree) {
-                to_swap->left_subtree->parent = to_swap->parent;
-            }
+    __detail::bst_impl<tkey, tvalue, compare, tag>::erase(*this, link, ind);
     
-            to_swap->left_subtree = to_del->left_subtree;
-            to_swap->right_subtree = to_del->right_subtree;
-            to_swap->parent = to_del->parent;
-    
-            *link = to_swap;
-    
-            to_swap->left_subtree->parent = to_swap;
-            to_swap->right_subtree->parent = to_swap;
-        }
-    }
-    
-    __detail::bst_impl<tkey, tvalue, compare, tag>::erase(*this, &target);
-    __detail::bst_impl<tkey, tvalue, compare, tag>::delete_node(*this, to_del);
     return pos;
 }
 
@@ -3603,8 +3562,58 @@ namespace __detail {
     }
 
     template<typename tkey, typename tvalue, typename compare, typename tag>
-    void bst_impl<tkey, tvalue, compare, tag>::erase(binary_search_tree<tkey, tvalue, compare, tag>& cont, typename binary_search_tree<tkey, tvalue, compare, tag>::node** node_ptr)
-    {}
+    void bst_impl<tkey, tvalue, compare, tag>::erase(binary_search_tree<tkey, tvalue, compare, tag>& cont, typename binary_search_tree<tkey, tvalue, compare, tag>::node** link, int ind)
+    {
+        using node_BST = typename binary_search_tree<tkey, tvalue, compare, tag>::node;
+        node_BST* to_del = *link;
+        
+        if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
+            *link = nullptr;
+        } 
+        else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
+
+            *link = to_del->right_subtree;
+            to_del->right_subtree->parent = to_del->parent;
+        } 
+        else if ((to_del->left_subtree != nullptr) && (to_del->right_subtree == nullptr)) {
+
+            *link = to_del->left_subtree;
+            to_del->left_subtree->parent = to_del->parent;
+        } else {
+
+            node_BST* to_swap = to_del->left_subtree;
+
+            if (to_swap->right_subtree == nullptr) {
+                ind = 1;
+                to_swap->parent = to_del->parent;
+                *link = to_swap;
+                to_swap->right_subtree = to_del->right_subtree;
+                to_del->right_subtree->parent = to_swap;
+                to_del->parent = to_swap;
+            } else {
+
+                while (to_swap->right_subtree != nullptr) {
+                    to_swap = to_swap->right_subtree;
+                }
+                ind = 2;
+                to_swap->parent->right_subtree = to_swap->left_subtree;
+                if (to_swap->left_subtree) {
+                    to_swap->left_subtree->parent = to_swap->parent;
+                }
+        
+                std::swap(to_swap->left_subtree, to_del->left_subtree);
+                std::swap(to_swap->right_subtree, to_del->right_subtree);
+                std::swap(to_swap->parent, to_del->parent);
+        
+                *link = to_swap;
+        
+                to_swap->left_subtree->parent = to_swap;
+                to_swap->right_subtree->parent = to_swap;
+            }
+        }
+        __detail::bst_impl<tkey, tvalue, compare, tag>::delete_node(cont, to_del);
+
+    }
 }
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_BINARY_SEARCH_TREE_H

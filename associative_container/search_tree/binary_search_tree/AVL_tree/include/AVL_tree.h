@@ -23,7 +23,7 @@ namespace __detail
         //Does not invalidate node*
         static void post_insert(binary_search_tree<tkey, tvalue, compare, AVL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node**);
 
-        static void erase(binary_search_tree<tkey, tvalue, compare, AVL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node**);
+        static void erase(binary_search_tree<tkey, tvalue, compare, AVL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node**, int ind);
 
         static void swap(binary_search_tree<tkey, tvalue, compare, AVL_TAG>& lhs, binary_search_tree<tkey, tvalue, compare, AVL_TAG>& rhs) noexcept;
     };
@@ -679,9 +679,69 @@ namespace __detail
     template<typename tkey, typename tvalue, typename compare>
     void bst_impl<tkey, tvalue, compare, AVL_TAG>::erase(
             binary_search_tree <tkey, tvalue, compare, AVL_TAG> &cont,
-            typename binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node **node)
+            typename binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node **link, int ind)
     {
-        post_insert(cont, node);
+        using node_BST = typename binary_search_tree<tkey, tvalue, compare, AVL_TAG>::node;
+        node_BST* to_del = *link;
+        node_BST* target;
+        if (to_del->parent == nullptr) {
+            target = cont._root;
+        } else if (to_del->parent->left_subtree == to_del) {
+            target = to_del->parent;
+        } else {
+            target = to_del->parent;
+        }
+        
+        if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
+            *link = nullptr;
+        } 
+        else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
+
+            *link = to_del->right_subtree;
+            to_del->right_subtree->parent = to_del->parent;
+        } 
+        else if ((to_del->left_subtree != nullptr) && (to_del->right_subtree == nullptr)) {
+
+            *link = to_del->left_subtree;
+            to_del->left_subtree->parent = to_del->parent;
+        }
+        else {
+
+            node_BST* to_swap = to_del->left_subtree;
+
+            if (to_swap->right_subtree == nullptr) {
+                target = to_swap;
+                ind = 1;
+                to_swap->parent = to_del->parent;
+                *link = to_swap;
+                to_swap->right_subtree = to_del->right_subtree;
+                to_del->right_subtree->parent = to_swap;
+                to_del->parent = to_swap;
+            } else {
+
+                while (to_swap->right_subtree != nullptr) {
+                    to_swap = to_swap->right_subtree;
+                }
+        
+                target = to_swap->parent;
+                ind = 2;
+                to_swap->parent->right_subtree = to_swap->left_subtree;
+                if (to_swap->left_subtree) {
+                    to_swap->left_subtree->parent = to_swap->parent;
+                }
+        
+                std::swap(to_swap->left_subtree, to_del->left_subtree);
+                std::swap(to_swap->right_subtree, to_del->right_subtree);
+                std::swap(to_swap->parent, to_del->parent);
+        
+                *link = to_swap;
+        
+                to_swap->left_subtree->parent = to_swap;
+                to_swap->right_subtree->parent = to_swap;
+            }
+        }
+        __detail::bst_impl<tkey, tvalue, compare, AVL_TAG>::delete_node(cont, to_del);
+        post_insert(cont, &target);
     }
 }
 
