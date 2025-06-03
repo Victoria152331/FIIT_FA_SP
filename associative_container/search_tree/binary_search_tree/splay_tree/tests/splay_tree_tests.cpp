@@ -77,7 +77,9 @@ bool infix_iterator_test(
 
     for (; vec_begin != vec_end; ++vec_begin)
     {
+
         auto &item = *vec_begin;
+        std::cout << it.depth() << " " << it->first << " | " << item.depth << " " << item.key <<  "\n";
         if (it.depth() != item.depth || it->first != item.key || it->second != item.value)
         {
             return false;
@@ -101,6 +103,7 @@ bool prefix_iterator_test(
 
     for (auto const &item: expected_result)
     {
+        std::cout << it.depth() << " " << it->first << " | " << item.depth << " " << item.key <<  "\n";
         if (it.depth() != item.depth || it->first != item.key || it->second != item.value)
         {
             return false;
@@ -125,6 +128,7 @@ bool postfix_iterator_test(
 
     for (auto &item: expected_result)
     {
+        std::cout << it.depth() << " " << it->first << " | " << item.depth << " " << item.key <<  "\n";
         if (it.depth() != item.depth || it->first != item.key || it->second != item.value)
         {
             return false;
@@ -455,6 +459,8 @@ TEST(splayTreePositiveTests, test9)
     splay1->emplace(2, "e");
     splay1->emplace(4, "b");
     splay1->emplace(18, "e");
+
+    std::cout << "hello\n";
 
     std::vector<std::string> vector;
 

@@ -18,7 +18,7 @@ namespace __detail
         static void delete_node(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node* to_del);
 
         //Does not invalidate node*, needed for splay tree
-        static void post_search(binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**){}
+        static void post_search(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**){}
 
         //Does not invalidate node*
         static void post_insert(binary_search_tree<tkey, tvalue, compare, RB_TAG>& cont, binary_search_tree<tkey, tvalue, compare, RB_TAG>::node**);

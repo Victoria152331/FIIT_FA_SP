@@ -618,9 +618,6 @@ TEST(redBlackTreePositiveTests, test17)
 				break;
 		}
 	}
-    for (auto it = tree.begin(); it != tree.end(); it++ ) {
-        std::cout << it->first << " " << it.depth() << " " << ((it.get_color() == red_black_tree<int, int>::node_color::RED) ? "red" : "black") << std::endl;
-    }
 
 	while(!map.empty())
 	{

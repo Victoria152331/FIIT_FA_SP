@@ -10,27 +10,116 @@ namespace __detail
     template<typename tkey, typename tvalue, typename compare>
     class bst_impl<tkey, tvalue, compare, SPL_TAG>
     {
+        friend class binary_search_tree<tkey, tvalue, compare, SPL_TAG>;
         template<class ...Args>
-        static binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node* create_node(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, Args&& ...args);
+        static binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node* create_node(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, Args&& ...args)
+        {
+            using node_t = typename binary_search_tree<tkey,tvalue,compare,SPL_TAG>::node;
+            auto* n = cont._allocator.template new_object<node_t>(std::forward<Args>(args) ...);
 
-        static void delete_node(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont);
+            ++cont._size;
+            return n;
+        }
+
+        static void delete_node(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node* node)
+        {
+            cont._allocator.delete_object(node);
+            --cont._size;
+        }
 
         //Does not invalidate node*, needed for splay tree
-        static void post_search(binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node**){}
+        static void post_search(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node **node) {
+            using BST = binary_search_tree<tkey, tvalue, compare, SPL_TAG>;
+            typename BST::node* target = *node;
+            typename BST::node** link;
+            std::cout << "uauau\n";
+            while (target->parent != nullptr) {
+                auto pr = target->parent;
+                auto gr = pr->parent;
+                if (gr != nullptr) {
+                    if (gr->parent == nullptr) {
+                        link = &(cont._root);
+                    } else if (gr->parent->left_subtree == gr) {
+                        link = &(gr->parent->left_subtree);
+                    } else {
+                        link = &(gr->parent->right_subtree);
+                    }
+                }
+        
+                if (gr == nullptr && target == pr->left_subtree)
+                {
+                    BST::small_right_rotation(cont._root);
+                }
+                else if (gr == nullptr && target == pr->right_subtree)
+                {
+                    BST::small_left_rotation(cont._root);
+                }
+                else if (pr == gr->left_subtree && target == pr->left_subtree)
+                {
+                    BST::double_right_rotation(*link);
+                }
+                else if (pr == gr->right_subtree && target == pr->right_subtree)
+                {
+                    BST::double_left_rotation(*link);
+                }
+                else if (pr == gr->left_subtree && target == pr->right_subtree)
+                {
+                    BST::big_right_rotation(*link);
+                }
+                else
+                {
+                    BST::big_left_rotation(*link);
+                }
+            }
+        }
 
         //Does not invalidate node*
-        static void post_insert(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node**);
+        static void post_insert(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node** node) {}
 
-        static void erase(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node**);
+        static void erase(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& cont, binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node** link, int ind)
+        {
+            using node_BST = typename binary_search_tree<tkey, tvalue, compare, SPL_TAG>::node;
+            post_search(cont, link);
+            node_BST* to_del = cont._root;
+            
+            if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
+                cont._root = nullptr;
+            } 
+            else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
 
-        static void swap(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& lhs, binary_search_tree<tkey, tvalue, compare, SPL_TAG>& rhs) noexcept;
+                cont._root = to_del->right_subtree;
+                to_del->right_subtree->parent = nullptr;
+            } 
+            else {
+                node_BST* to_swap = to_del->left_subtree;
+                to_swap->parent = nullptr;
+                while (to_swap->right_subtree != nullptr) {
+                    to_swap = to_swap->right_subtree;
+                }
+                post_search(cont, &to_swap);
+                to_swap->right_subtree = to_del->right_subtree;
+                to_del->right_subtree->parent = to_swap;
+                cont._root = to_swap;
+            }
+            __detail::bst_impl<tkey, tvalue, compare, SPL_TAG>::delete_node(cont, to_del);
+
+        }
+
+        static void swap(binary_search_tree<tkey, tvalue, compare, SPL_TAG>& lhs, binary_search_tree<tkey, tvalue, compare, SPL_TAG>& rhs) noexcept
+        {
+            std::swap(lhs._root, rhs._root);
+            std::swap(lhs._size, rhs._size);
+            std::swap(lhs._logger, rhs._logger);
+            std::swap(lhs._allocator, rhs._allocator);
+            std::swap(static_cast<compare&>(lhs), static_cast<compare&>(rhs));
+        }
     };
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare = std::less<tkey>>
 class splay_tree final: public binary_search_tree<tkey, tvalue, compare, __detail::SPL_TAG>
 {
-
+    friend class __detail::bst_impl<tkey, tvalue, compare, __detail::SPL_TAG>;
     using parent = binary_search_tree<tkey, tvalue, compare, __detail::SPL_TAG>;
 public:
 
@@ -63,15 +152,15 @@ public:
 
 public:
     
-    ~splay_tree() noexcept final;
+    ~splay_tree() noexcept final = default;
     
     splay_tree(splay_tree const &other);
     
     splay_tree &operator=(splay_tree const &other);
     
-    splay_tree(splay_tree &&other) noexcept;
+    splay_tree(splay_tree &&other) noexcept =default;
     
-    splay_tree &operator=(splay_tree &&other) noexcept;
+    splay_tree &operator=(splay_tree &&other) noexcept =default ;
 
 };
 
@@ -97,18 +186,16 @@ splay_tree<tkey, tvalue, compare>::splay_tree(
         const compare& comp,
         pp_allocator<value_type> alloc,
         logger *log)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::splay_tree(const compare& comp, pp_allocator<value_type> alloc, logger *log)", "your code should be here...");
-}
+    : parent(comp, alloc, log)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 splay_tree<tkey, tvalue, compare>::splay_tree(
         pp_allocator<value_type> alloc,
         const compare& comp,
         logger *log)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::splay_tree(pp_allocator<value_type> alloc, const compare& comp, logger *log)", "your code should be here...");
-}
+    : parent(alloc, comp, log)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 template<input_iterator_for_pair<tkey, tvalue> iterator>
@@ -118,9 +205,8 @@ splay_tree<tkey, tvalue, compare>::splay_tree(
         const compare& cmp,
         pp_allocator<value_type> alloc,
         logger* log)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> template<input_iterator_for_pair<tkey, tvalue> iterator>splay_tree<tkey, tvalue, compare>::splay_tree(iterator begin,iterator end,const compare& cmp,pp_allocator<value_type> alloc,logger* log)", "your code should be here...");
-}
+    : parent(begin, end, cmp, alloc, log)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 template<std::ranges::input_range Range>
@@ -129,9 +215,8 @@ splay_tree<tkey, tvalue, compare>::splay_tree(
         const compare& cmp,
         pp_allocator<value_type> alloc,
         logger* log)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> template<std::ranges::input_range Range> splay_tree<tkey, tvalue, compare>::splay_tree(Range&& range, const compare& cmp, pp_allocator<value_type> alloc, logger* log)", "your code should be here...");
-}
+    : parent(range, cmp, alloc, log)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 splay_tree<tkey, tvalue, compare>::splay_tree(
@@ -139,39 +224,21 @@ splay_tree<tkey, tvalue, compare>::splay_tree(
         const compare& cmp,
         pp_allocator<value_type> alloc,
         logger* log)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::splay_tree(std::initializer_list<std::pair<tkey, tvalue>> data, const compare& cmp, pp_allocator<value_type> alloc, logger* log)", "your code should be here...");
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare>
-splay_tree<tkey, tvalue, compare>::~splay_tree() noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::~splay_tree() noexcept", "your code should be here...");
-}
+    : parent(data, cmp, alloc, log)
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 splay_tree<tkey, tvalue, compare>::splay_tree(splay_tree const &other)
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::splay_tree(splay_tree const &other)", "your code should be here...");
-}
+    :parent(static_cast<parent>(other))
+{}
 
 template<typename tkey, typename tvalue, compator<tkey> compare>
 splay_tree<tkey, tvalue, compare> &splay_tree<tkey, tvalue, compare>::operator=(splay_tree const &other)
 {
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare> &splay_tree<tkey, tvalue, compare>::operator=(splay_tree const &other)", "your code should be here...");
+    parent::operator=(static_cast<parent>(other));
+    return *this;
 }
 
-template<typename tkey, typename tvalue, compator<tkey> compare>
-splay_tree<tkey, tvalue, compare>::splay_tree(splay_tree &&other) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare>::splay_tree(splay_tree &&other) noexcept", "your code should be here...");
-}
-
-template<typename tkey, typename tvalue, compator<tkey> compare>
-splay_tree<tkey, tvalue, compare> &splay_tree<tkey, tvalue, compare>::operator=(splay_tree &&other) noexcept
-{
-    throw not_implemented("template<typename tkey, typename tvalue, compator<tkey> compare> splay_tree<tkey, tvalue, compare> &splay_tree<tkey, tvalue, compare>::operator=(splay_tree &&other) noexcept", "your code should be here...");
-}
 
 // endregion implementation
 

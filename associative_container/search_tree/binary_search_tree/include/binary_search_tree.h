@@ -8,7 +8,8 @@
 #include <search_tree.h>
 #include <ranges>
 #include <pp_allocator.h>
-#include <utility> // для std::forward
+#include <utility>
+#include <iostream>
 
 namespace __detail
 {
@@ -936,7 +937,7 @@ namespace __detail
         static void delete_node(binary_search_tree<tkey, tvalue, compare, tag>& cont, typename binary_search_tree<tkey, tvalue, compare, tag>::node* node);
 
         //Does not invalidate node*, needed for splay tree
-        static void post_search(binary_search_tree<tkey, tvalue, compare, tag>::node**){}
+        static void post_search(binary_search_tree<tkey, tvalue, compare, tag>& cont, binary_search_tree<tkey, tvalue, compare, tag>::node**){}
 
         //Does not invalidate node*
         static void post_insert(binary_search_tree<tkey, tvalue, compare, tag>& cont, binary_search_tree<tkey, tvalue, compare, tag>::node**){}
@@ -1060,7 +1061,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::prefix_iterator::operator++() & 
     } else if (_data->right_subtree != nullptr) {
         _data = _data->right_subtree;
     } else {
-        while ((_data->parent != nullptr) && (_data->parent->left_subtree != _data)) {
+        while ((_data->parent != nullptr) && ((_data->parent->left_subtree != _data) || (_data->parent->right_subtree == nullptr))) {
             _data = _data->parent;
         }
         if (_data->parent != nullptr) {
@@ -2452,22 +2453,22 @@ void binary_search_tree<tkey, tvalue, compare, tag>::delete_subtree (node* n)
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 tvalue& binary_search_tree<tkey, tvalue, compare, tag>::at(const tkey& key)
 {
-    node** cur = &_root;
-    while (*cur != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            cur = &((*cur)->right_subtree);
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            cur = &((*cur)->left_subtree);
+    node* cur = _root;
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            cur = cur->right_subtree;
+        } else if (compare_keys(key, cur->data.first)) {
+            cur = cur->left_subtree;
         } else {
             break;
         }
     }
     
-    if (*cur == nullptr) {
+    if (cur == nullptr) {
         throw std::out_of_range("");
     }
-    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
-    return (*cur)->data.second;
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
+    return cur->data.second;
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
@@ -2533,6 +2534,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::insert(const value_type& value)
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return std::make_pair(infix_iterator(*cur), true);
 }
 
@@ -2557,6 +2559,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::insert(value_type&& value)
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return std::make_pair(infix_iterator(*cur), true);
 }
 
@@ -2601,6 +2604,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::emplace(Args&&... args)
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return std::make_pair(infix_iterator(*cur), true);
 }
 
@@ -2626,6 +2630,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::insert_or_assign(const value_typ
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return infix_iterator(*cur);
 }
 
@@ -2651,6 +2656,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::insert_or_assign(value_type&& va
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return infix_iterator(*cur);
 }
 
@@ -2687,6 +2693,7 @@ binary_search_tree<tkey, tvalue, compare, tag>::emplace_or_assign(Args&&... args
 
     *cur = __detail::bst_impl<tkey, tvalue, compare, tag>::create_node(*this, prev, value);
     __detail::bst_impl<tkey, tvalue, compare, tag>::post_insert(*this, cur);
+    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return infix_iterator(*cur);
 }
 
@@ -2720,7 +2727,7 @@ bool binary_search_tree<tkey, tvalue, compare, tag>::contains(const tkey& key) c
         }
     }
     
-    if (res) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
+    if (res) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, cur);
     return res;
 }
 
@@ -2729,54 +2736,54 @@ typename binary_search_tree<tkey, tvalue, compare, tag>::infix_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::find(const tkey& key)
 {
 
-    node** cur = &_root;
-    while ((*cur) != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            cur = &((*cur)->right_subtree);
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            cur = &((*cur)->left_subtree);
+    node* cur = _root;
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            cur = cur->right_subtree;
+        } else if (compare_keys(key, cur->data.first)) {
+            cur = cur->left_subtree;
         } else {
             break;
         }
     }
-    if (*cur != nullptr) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
-    return infix_iterator(*cur);
+    if (cur != nullptr) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
+    return infix_iterator(cur);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 typename binary_search_tree<tkey, tvalue, compare, tag>::infix_const_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::find(const tkey& key) const
 {
-    node** cur = &_root;
-    while ((*cur) != nullptr) {
+    node* cur = _root;
+    while (cur != nullptr) {
         if (compare_keys(cur->data.first, key)) {
-            cur = &((*cur)->right_subtree);
-        } else if (compare_keys(key, cur->data.first)) {
-            cur = &((*cur)->left_subtree);
+            cur = cur->right_subtree;
+        } else if (compare_keys(key, (*cur)->data.first)) {
+            cur = cur->left_subtree;
         } else {
             break;
         }
     }
-    __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
-    return infix_iterator(*cur);
+    if (cur != nullptr) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
+    return infix_iterator(cur);
 }
 
 template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 typename binary_search_tree<tkey, tvalue, compare, tag>::infix_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::lower_bound(const tkey& key)
 {
-    node** cur = &_root;
+    node* cur = _root;
     node* prev = nullptr;
     bool contain = false;
     bool is_left = false;
-    while ((*cur) != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            prev = *cur;
-            cur = &((*cur)->right_subtree);
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            prev = cur;
+            cur = cur->right_subtree;
             is_left = false;
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            prev = *cur;
-            cur = &((*cur)->left_subtree);
+        } else if (compare_keys(key, cur->data.first)) {
+            prev = cur;
+            cur = cur->left_subtree;
             is_left = true;
         } else {
             contain = true;
@@ -2784,11 +2791,11 @@ binary_search_tree<tkey, tvalue, compare, tag>::lower_bound(const tkey& key)
         }
     }
     
-    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
+    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
 
 
     if (contain) {
-        return infix_iterator(*cur);
+        return infix_iterator(cur);
     } else {
         auto res = infix_iterator(prev);
         if (is_left) {
@@ -2802,18 +2809,18 @@ template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 typename binary_search_tree<tkey, tvalue, compare, tag>::infix_const_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::lower_bound(const tkey& key) const
 {
-    node** cur = &_root;
+    node* cur = _root;
     node* prev = nullptr;
     bool contain = false;
     bool is_left = false;
-    while ((*cur) != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            prev = *cur;
-            cur = &((*cur)->right_subtree);
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            prev = cur;
+            cur = cur->right_subtree;
             is_left = false;
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            prev = *cur;
-            cur = &((*cur)->left_subtree);
+        } else if (compare_keys(key, cur->data.first)) {
+            prev = cur;
+            cur = cur->left_subtree;
             is_left = true;
         } else {
             contain = true;
@@ -2821,13 +2828,13 @@ binary_search_tree<tkey, tvalue, compare, tag>::lower_bound(const tkey& key) con
         }
     }
     
-    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
+    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
 
 
     if (contain) {
-        return infix_const_iterator(*cur);
+        return infix_iterator(cur);
     } else {
-        auto res = infix_const_iterator(prev);
+        auto res = infix_iterator(prev);
         if (is_left) {
             --res;
         }
@@ -2839,18 +2846,18 @@ template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 typename binary_search_tree<tkey, tvalue, compare, tag>::infix_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::upper_bound(const tkey& key)
 {
-    node** cur = &_root;
+    node* cur = _root;
     node* prev = nullptr;
     bool contain = false;
     bool is_right = false;
-    while ((*cur) != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            prev = *cur;
-            cur = &((*cur)->right_subtree);
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            prev = cur;
+            cur = cur->right_subtree;
             is_right = true;
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            prev = *cur;
-            cur = &((*cur)->left_subtree);
+        } else if (compare_keys(key, cur->data.first)) {
+            prev = cur;
+            cur = cur->left_subtree;
             is_right = false;
         } else {
             contain = true;
@@ -2858,11 +2865,11 @@ binary_search_tree<tkey, tvalue, compare, tag>::upper_bound(const tkey& key)
         }
     }
     
-    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
+    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
 
 
     if (contain) {
-        return infix_iterator(*cur);
+        return infix_iterator(cur);
     } else {
         auto res = infix_iterator(prev);
         if (is_right) {
@@ -2876,18 +2883,18 @@ template<typename tkey, typename tvalue, compator<tkey> compare, typename tag>
 typename binary_search_tree<tkey, tvalue, compare, tag>::infix_const_iterator
 binary_search_tree<tkey, tvalue, compare, tag>::upper_bound(const tkey& key) const
 {
-    node** cur = &_root;
+    node* cur = _root;
     node* prev = nullptr;
     bool contain = false;
     bool is_right = false;
-    while ((*cur) != nullptr) {
-        if (compare_keys((*cur)->data.first, key)) {
-            prev = *cur;
-            cur = &((*cur)->right_subtree);
+    while (cur != nullptr) {
+        if (compare_keys(cur->data.first, key)) {
+            prev = cur;
+            cur = cur->right_subtree;
             is_right = true;
-        } else if (compare_keys(key, (*cur)->data.first)) {
-            prev = *cur;
-            cur = &((*cur)->left_subtree);
+        } else if (compare_keys(key, cur->data.first)) {
+            prev = cur;
+            cur = cur->left_subtree;
             is_right = false;
         } else {
             contain = true;
@@ -2895,13 +2902,13 @@ binary_search_tree<tkey, tvalue, compare, tag>::upper_bound(const tkey& key) con
         }
     }
     
-    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(cur);
+    if (contain) __detail::bst_impl<tkey, tvalue, compare, tag>::post_search(*this, &cur);
 
 
     if (contain) {
-        return infix_const_iterator(*cur);
+        return infix_iterator(cur);
     } else {
-        auto res = infix_const_iterator(prev);
+        auto res = infix_iterator(prev);
         if (is_right) {
             ++res;
         }
@@ -2938,7 +2945,6 @@ binary_search_tree<tkey, tvalue, compare, tag>::erase(infix_iterator pos)
         ind = 2;
     }
 
-    
     __detail::bst_impl<tkey, tvalue, compare, tag>::erase(*this, link, ind);
     
     return pos;
