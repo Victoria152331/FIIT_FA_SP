@@ -32,7 +32,6 @@ namespace __detail
             using BST = binary_search_tree<tkey, tvalue, compare, SPL_TAG>;
             typename BST::node* target = *node;
             typename BST::node** link;
-            std::cout << "uauau\n";
             while (target->parent != nullptr) {
                 auto pr = target->parent;
                 auto gr = pr->parent;

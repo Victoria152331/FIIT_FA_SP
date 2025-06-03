@@ -8,6 +8,7 @@
 #include <typename_holder.h>
 #include <iterator>
 #include <mutex>
+#include <sstream>
 
 class allocator_sorted_list final:
     public smart_mem_resource,
@@ -21,9 +22,27 @@ private:
     
     void *_trusted_memory;
 
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(std::pmr::memory_resource *) + sizeof(fit_mode) + sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
+    struct global_metadata {
+        std::mutex mutex;
+        ::logger* logger;
+        memory_resource* parent_allocator;
+        size_t space_size;
+        void* first_block;
+        allocator_with_fit_mode::fit_mode fit_mode;
+    };
 
-    static constexpr const size_t block_metadata_size = sizeof(void*) + sizeof(size_t);
+    struct block_metadata {
+        size_t block_size;
+        void* ptr;
+    };
+
+    void* place_in(block_metadata** block, size_t size);
+
+    std::pair<std::string, size_t> format_blocks_info();
+
+    static constexpr const size_t allocator_metadata_size = sizeof(global_metadata);
+
+    static constexpr const size_t block_metadata_size = sizeof(block_metadata);
 
 public:
 
