@@ -62,7 +62,7 @@ TEST(allocatorSortedListPositiveTests, test2)
                                                     }));
 
     std::unique_ptr<smart_mem_resource> alloc(new allocator_sorted_list(3000, nullptr, logger_instance.get(),
-                                                            allocator_with_fit_mode::fit_mode::the_worst_fit));
+                                                            allocator_with_fit_mode::fit_mode::first_fit));
     
     auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int) * 250));
     
@@ -101,17 +101,17 @@ TEST(allocatorSortedListPositiveTests, test3)
                 try
                 {
                     allocated_blocks.push_front(allocator->allocate(sizeof(void *) * (rand() % 251 + 50)));
-                    std::cout << "allocation succeeded" << std::endl;
+                     // std::endl << "allocation succeeded" << std::endl;
                 }
                 catch (std::bad_alloc const &ex)
                 {
-                    std::cout << ex.what() << std::endl;
+                     // std::endl << ex.what() << std::endl;
                 }
                 break;
             case 1:
                 if (allocated_blocks.empty())
                 {
-                    std::cout << "No blocks to deallocate" << std::endl;
+                     // std::endl << "No blocks to deallocate" << std::endl;
                     
                     break;
                 }
@@ -120,7 +120,7 @@ TEST(allocatorSortedListPositiveTests, test3)
                 std::advance(it, rand() % allocated_blocks.size());
                 allocator->deallocate(*it, 1);
                 allocated_blocks.erase(it);
-                std::cout << "deallocation succeeded" << std::endl;
+                 // std::endl << "deallocation succeeded" << std::endl;
                 break;
         }
     }
@@ -131,7 +131,7 @@ TEST(allocatorSortedListPositiveTests, test3)
         std::advance(it, rand() % allocated_blocks.size());
         allocator->deallocate(*it, 1);
         allocated_blocks.erase(it);
-        std::cout << "deallocation succeeded" << std::endl;
+         // std::endl << "deallocation succeeded" << std::endl;
     }
 }
 
@@ -208,17 +208,17 @@ TEST(allocatorSortedListPositiveTests, test5)
                     }
                     
                     allocated_blocks.push_front(allocator->allocate(sizeof(char) * rand() % 251 + 50));
-                    std::cout << "allocation succeeded" << std::endl;
+                     // std::endl << "allocation succeeded" << std::endl;
                 }
                 catch (std::bad_alloc const &ex)
                 {
-                    std::cout << ex.what() << std::endl;
+                     // std::endl << ex.what() << std::endl;
                 }
                 break;
             case 1:
                 if (allocated_blocks.empty())
                 {
-                    std::cout << "No blocks to deallocate" << std::endl;
+                     // std::endl << "No blocks to deallocate" << std::endl;
                     
                     break;
                 }
@@ -227,7 +227,7 @@ TEST(allocatorSortedListPositiveTests, test5)
                 std::advance(it, rand() % allocated_blocks.size());
                 allocator->deallocate(*it, 1);
                 allocated_blocks.erase(it);
-                std::cout << "deallocation succeeded" << std::endl;
+                 // std::endl << "deallocation succeeded" << std::endl;
                 break;
         }
     }
@@ -238,7 +238,7 @@ TEST(allocatorSortedListPositiveTests, test5)
         std::advance(it, rand() % allocated_blocks.size());
         allocator->deallocate(*it, 1);
         allocated_blocks.erase(it);
-        std::cout << "deallocation succeeded" << std::endl;
+         // std::endl << "deallocation succeeded" << std::endl;
     }
 }
 

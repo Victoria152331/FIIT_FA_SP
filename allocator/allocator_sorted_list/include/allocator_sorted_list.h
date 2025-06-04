@@ -38,6 +38,8 @@ private:
 
     void* place_in(block_metadata** block, size_t size);
 
+    void insert_in_list (block_metadata* block);
+
     std::pair<std::string, size_t> format_blocks_info();
 
     static constexpr const size_t allocator_metadata_size = sizeof(global_metadata);

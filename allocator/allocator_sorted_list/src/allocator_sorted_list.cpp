@@ -72,6 +72,10 @@ allocator_sorted_list::allocator_sorted_list(
     if (meta->logger) {
         meta->logger->debug("allocator_sorted_list::allocator_sorted_list - constructor end");
         auto res = format_blocks_info();
+        // for (block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block); cur != nullptr; cur = reinterpret_cast<block_metadata*>(cur->ptr)) {
+        //     std::cout << cur->block_size << "|";
+        // }
+        // std::cout << std::endl;
         meta->logger->debug(res.first);
         meta->logger->information(std::to_string(res.second));
     }
@@ -98,7 +102,8 @@ allocator_sorted_list::allocator_sorted_list(
             if (cur == nullptr) {
                 throw std::bad_alloc();
             }
-            place_in(cur_ptr, size);
+            // if (meta->logger) meta->logger->debug("place in");
+            res = place_in(cur_ptr, size);
 
         } else if (meta->fit_mode == fit_mode::the_best_fit) {
             block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
@@ -117,7 +122,8 @@ allocator_sorted_list::allocator_sorted_list(
             if (best_ptr == nullptr) {
                 throw std::bad_alloc();
             }
-            place_in(best_ptr, size);
+            // if (meta->logger) meta->logger->debug("place in");
+            res = place_in(best_ptr, size);
         } else if (meta->fit_mode == fit_mode::the_worst_fit) {
             block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
             block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block);
@@ -135,7 +141,8 @@ allocator_sorted_list::allocator_sorted_list(
             if (best_ptr == nullptr) {
                 throw std::bad_alloc();
             }
-            place_in(best_ptr, size);
+            //if (meta->logger) meta->logger->debug("place in");
+            res = place_in(best_ptr, size);
         }
     }
     catch (const std::bad_alloc &) {
@@ -148,6 +155,10 @@ allocator_sorted_list::allocator_sorted_list(
     if (meta->logger) {
         meta->logger->debug("do_allocate_sm - end");
         auto res = format_blocks_info();
+        // for (block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block); cur != nullptr; cur = reinterpret_cast<block_metadata*>(cur->ptr)) {
+        //     std::cout << cur->block_size << "|";
+        // }
+        // std::cout << std::endl;
         meta->logger->debug(res.first);
         meta->logger->information(std::to_string(res.second));
     }
@@ -155,19 +166,22 @@ allocator_sorted_list::allocator_sorted_list(
 }
 
 void* allocator_sorted_list::place_in(block_metadata** block, size_t size) {
+    global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
     block_metadata* new_occ_block = *block;
-    if ((*block)->block_size <= size + block_metadata_size) {
+    if ((*block)->block_size <= size + 2 * block_metadata_size) {
         *block = reinterpret_cast<block_metadata*>((*block)->ptr);
         new_occ_block->ptr = _trusted_memory;
     } else {
+        //meta->logger->debug("new free");
         block_metadata* new_free_block = reinterpret_cast<block_metadata*>(
-            reinterpret_cast<char*>(new_occ_block) + size
+            reinterpret_cast<char*>(new_occ_block) + size + block_metadata_size
         );
-        new_free_block->ptr = (*block)->ptr;
-        *block = new_free_block;
+        *block = reinterpret_cast<block_metadata*>((*block)->ptr);
         new_free_block->block_size = new_occ_block->block_size - size - block_metadata_size;
+        new_free_block->ptr = nullptr;
         new_occ_block->ptr = _trusted_memory;
         new_occ_block->block_size = size + block_metadata_size;
+        insert_in_list(new_free_block);
     }
     return reinterpret_cast<void*>(
         reinterpret_cast<char*>(new_occ_block) + block_metadata_size
@@ -197,41 +211,33 @@ void allocator_sorted_list::do_deallocate_sm(
             meta->mutex.unlock();
             throw std::runtime_error("do_deallocate_sm - invalid block");
         }
-        block_metadata* cur_free_block = reinterpret_cast<block_metadata*>(meta->first_block);
-        if (reinterpret_cast<char*>(block_to_del) < reinterpret_cast<char*>(cur_free_block)) {
-            if (reinterpret_cast<char*>(block_to_del) + block_to_del->block_size == reinterpret_cast<char*>(cur_free_block)) {
-                block_to_del->ptr = cur_free_block->ptr;
-                block_to_del->block_size += cur_free_block->block_size;
-                meta->first_block = block_to_del;
+        block_metadata** cur_free_block = reinterpret_cast<block_metadata**>(&(meta->first_block));
+        block_metadata* left_block = nullptr;
+        block_metadata* right_block = nullptr;
+        block_to_del->ptr = nullptr;
+        // if (meta->logger) meta->logger->debug("iterating start");
+        while ((*cur_free_block != nullptr)) {
+            if (reinterpret_cast<char*>(*cur_free_block) + (*cur_free_block)->block_size == reinterpret_cast<char*>(block_to_del)) {
+                left_block = *cur_free_block; 
+                *cur_free_block = reinterpret_cast<block_metadata*>(left_block->ptr);
+            } else  if (reinterpret_cast<char*>(*cur_free_block) == reinterpret_cast<char*>(block_to_del) + block_to_del->block_size) {
+                right_block  = *cur_free_block;
+                *cur_free_block = reinterpret_cast<block_metadata*>(right_block->ptr);
             } else {
-                block_to_del->ptr = cur_free_block;
-                meta->first_block = block_to_del;
+                cur_free_block = reinterpret_cast<block_metadata**>(&((*cur_free_block)->ptr));
             }
-        } else {
-            while ((cur_free_block->ptr != nullptr) &&
-                (reinterpret_cast<char*>(cur_free_block->ptr) < reinterpret_cast<char*>(block_to_del))) {
-                
-                cur_free_block = reinterpret_cast<block_metadata*>(cur_free_block->ptr);
-            }
-
-            if (reinterpret_cast<char*>(block_to_del) == reinterpret_cast<char*>(cur_free_block) + cur_free_block->block_size) {
-                cur_free_block->block_size += block_to_del->block_size;
-                block_to_del = cur_free_block;
-            } else {
-                block_to_del->ptr = cur_free_block->ptr;
-                cur_free_block->ptr = block_to_del;
-            }
-
-            if (block_to_del->ptr != nullptr) {
-                cur_free_block = reinterpret_cast<block_metadata*>(block_to_del->ptr);
-                if (reinterpret_cast<char*>(block_to_del) + block_to_del->block_size == reinterpret_cast<char*>(cur_free_block)) {
-                    block_to_del->ptr = cur_free_block->ptr;
-                    block_to_del->block_size += cur_free_block->block_size;
-                }
-            }
-
         }
-
+        // if (meta->logger) meta->logger->debug("iterating end");
+        if (left_block) {
+            left_block->block_size += block_to_del->block_size;
+            left_block->ptr = nullptr;
+            block_to_del = left_block;
+        }
+        if (right_block) {
+            block_to_del->block_size += right_block->block_size;
+        }
+        // if (meta->logger) meta->logger->debug("insert");
+        insert_in_list(block_to_del);
     } 
     catch (...) {
         meta->mutex.unlock();
@@ -242,8 +248,33 @@ void allocator_sorted_list::do_deallocate_sm(
     if (meta->logger) {
         meta->logger->debug("do_deallocate_sm - end");;
         auto res = format_blocks_info();
+        // for (block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block); cur != nullptr; cur = reinterpret_cast<block_metadata*>(cur->ptr)) {
+        //     std::cout << cur->block_size << "|";
+        // }
+        // std::cout << std::endl;
         meta->logger->debug(res.first);
         meta->logger->information(std::to_string(res.second));
+    }
+}
+
+void allocator_sorted_list::insert_in_list (block_metadata* block) {
+    global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
+    block_metadata* cur_block = reinterpret_cast<block_metadata*>(meta->first_block);
+    if (cur_block == nullptr) {
+        meta->first_block = block;
+        block->ptr = nullptr;
+        return;
+    }
+    if (block->block_size < cur_block->block_size) {
+        meta->first_block = block;
+        block->ptr = cur_block;
+    } else {
+        while ((cur_block->ptr != nullptr) && 
+        (reinterpret_cast<block_metadata*>(cur_block->ptr)->block_size < block->block_size)) {
+            cur_block = reinterpret_cast<block_metadata*>(cur_block->ptr);
+        }
+        block->ptr = cur_block->ptr;
+        cur_block->ptr = reinterpret_cast<void*>(block);
     }
 }
 
@@ -290,11 +321,13 @@ std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_
     block_metadata* cur = reinterpret_cast<block_metadata*>(
         reinterpret_cast<char*>(_trusted_memory) + allocator_metadata_size
     );
+    bool flag = true;
     while (total < meta->space_size) {
         total += cur->block_size;
         if (cur->ptr == _trusted_memory) {
             blocks.push_back({cur->block_size, true});
         } else {
+            flag = false;
             blocks.push_back({cur->block_size, false});
         }
         cur = reinterpret_cast<block_metadata*>(reinterpret_cast<char*>(cur) + cur->block_size);
