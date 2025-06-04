@@ -623,8 +623,20 @@ big_int &big_int::multiply_assign(const big_int &other, big_int::multiplication_
         *this = karatsuba(a, b);
 
         _sign = result_sign;
-    }
+    } else if (rule == multiplication_rule::SchonhageStrassen) {
+        if (!(*this) || !other) {
+            *this = big_int(0);
+            return *this;
+        }
+        bool result_sign = (_sign == other._sign);
 
+        big_int a = *this; a._sign = true;
+        big_int b = other; b._sign = true;
+
+        *this = schonhage_strassen(a, b);
+
+        _sign = result_sign;
+    }
 
     optimise();
     return *this;
@@ -687,6 +699,219 @@ big_int big_int::karatsuba(const big_int& a, const big_int& b)
     res = z0;
     res.plus_assign(z1, m);
     res.plus_assign(z2, 2 * m);
+    res.optimise();
+    return res;
+}
+
+// fft
+
+namespace
+{
+    // Три «FFT-дружественных» простых модуля и их примитивные корни:
+    constexpr uint32_t P1 = 167772161;    // = 5 * 2^25 + 1
+    constexpr uint32_t G1 = 3;            // примитивный корень для P1, порядка 2^25
+
+    constexpr uint32_t P2 = 469762049;    // = 7 * 2^26 + 1
+    constexpr uint32_t G2 = 3;            // примитивный корень для P2, порядка 2^26
+
+    constexpr uint32_t P3 = 1224736769;   // = 73 * 2^24 + 1
+    constexpr uint32_t G3 = 3;            // примитивный корень для P3, порядка 2^24
+
+    // Быстрое возведение по модулю (для всех трёх P1/P2/P3).
+    static uint32_t mod_pow(uint32_t a, uint32_t e, uint32_t mod) {
+        uint64_t res = 1, base = a;
+        while(e) {
+            if (e & 1) res = (res * base) % mod;
+            base = (base * base) % mod;
+            e >>= 1;
+        }
+        return static_cast<uint32_t>(res);
+    }
+
+    // Инверсия по модулю (mod простое) через mod_pow(x, mod-2, mod)
+    static uint32_t mod_inv(uint32_t x, uint32_t mod) {
+        // предполагаем mod простое
+        return mod_pow(x, mod - 2, mod);
+    }
+
+    // Итеративный in-place NTT (cooley-tuk). invert = false → прямое, true → обратное
+    static void ntt(std::vector<uint32_t>& a, bool invert, uint32_t mod, uint32_t root) {
+        size_t n = a.size();
+        // 1) bit-reverse перестановка
+        int log_n = 0;
+        while ((1u << log_n) < n) log_n++;
+        std::vector<size_t> rev(n);
+        rev[0] = 0;
+        for (size_t i = 1; i < n; i++) {
+            rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (log_n - 1));
+        }
+        for (size_t i = 0; i < n; i++) {
+            if (i < rev[i]) std::swap(a[i], a[rev[i]]);
+        }
+
+        // 2) «бабочки»
+        for (size_t len = 2; len <= n; len <<= 1) {
+            // wlen = root^{(mod-1)/len} mod
+            uint32_t wlen = mod_pow(root, static_cast<uint32_t>((mod - 1) / len), mod);
+            if (invert) {
+                // для обратного NTT берём обратный корень
+                wlen = mod_inv(wlen, mod);
+            }
+            for (size_t i = 0; i < n; i += len) {
+                uint32_t w = 1;
+                size_t half = len >> 1;
+                for (size_t j = 0; j < half; j++) {
+                    uint32_t u = a[i + j];
+                    uint32_t v = static_cast<uint32_t>((uint64_t)a[i + j + half] * w % mod);
+                    uint32_t x = u + v;
+                    if (x >= mod) x -= mod;
+                    uint32_t y = u >= v ? (u - v) : (u + mod - v);
+                    a[i + j] = x;
+                    a[i + j + half] = y;
+                    w = static_cast<uint32_t>((uint64_t)w * wlen % mod);
+                }
+            }
+        }
+        // 3) если обратное — делим на n^{-1}
+        if (invert) {
+            uint32_t inv_n = mod_inv(static_cast<uint32_t>(n), mod);
+            for (size_t i = 0; i < n; i++) {
+                a[i] = static_cast<uint32_t>((uint64_t)a[i] * inv_n % mod);
+            }
+        }
+    }
+
+    // Вычисляет свёртку двух массивов a и b по модулю mod с помощью NTT (in-place).
+    // Возвращает вектор длины a.size() + b.size() - 1.
+    static std::vector<uint32_t> convolution_mod(const std::vector<uint32_t>& a,
+                                                 const std::vector<uint32_t>& b,
+                                                 uint32_t mod, uint32_t root)
+    {
+        size_t n1 = a.size();
+        size_t n2 = b.size();
+        size_t need = n1 + n2 - 1;
+        // ищем степень двойки ≥ need
+        size_t n = 1;
+        while (n < need) n <<= 1;
+
+        std::vector<uint32_t> fa(n, 0), fb(n, 0);
+        for (size_t i = 0; i < n1; i++) fa[i] = a[i];
+        for (size_t i = 0; i < n2; i++) fb[i] = b[i];
+
+        ntt(fa, false, mod, root);
+        ntt(fb, false, mod, root);
+        for (size_t i = 0; i < n; i++) {
+            fa[i] = static_cast<uint32_t>((uint64_t)fa[i] * fb[i] % mod);
+        }
+        ntt(fa, true, mod, root);
+
+        fa.resize(need);
+        return fa;
+    }
+
+    // Объединяет три массива (по трем разным модулю) через CRT → возвращает 64-битный результат
+    // Принцип: x ≡ c1 (mod P1), x ≡ c2 (mod P2), x ≡ c3 (mod P3).
+    static std::vector<uint64_t> crt_three(const std::vector<uint32_t>& c1,
+                                           const std::vector<uint32_t>& c2,
+                                           const std::vector<uint32_t>& c3)
+    {
+        size_t n = c1.size();
+        std::vector<uint64_t> res(n);
+
+        // Предвычислим степени:
+        // M1 = P1
+        // M2 = P1 * P2
+        // n12 = inv(P1 mod P2)
+        uint64_t m1 = P1;
+        uint64_t m2 = (uint64_t)P1 * P2 % P3;  // для третьего шага используют (P1*P2) mod P3
+        uint32_t invP1_modP2 = mod_inv(static_cast<uint32_t>(P1 % P2), P2);
+        uint32_t invP12_modP3 = mod_inv(static_cast<uint32_t>( (uint64_t)P1 * P2 % P3 ), P3);
+
+        for (size_t i = 0; i < n; i++) {
+            uint32_t x1 = c1[i];
+            uint32_t x2 = c2[i];
+            uint32_t x3 = c3[i];
+            // шаг 1: найти t2 = ((x2 - x1) * invP1_modP2) mod P2
+            int64_t t = (int64_t)x2 - (int64_t)x1;
+            if (t < 0) t += P2;
+            uint64_t t2 = (uint64_t)(t % P2) * invP1_modP2 % P2;
+
+            // шаг 2: найти t3 = ((x3 - (x1 + P1*t2) mod P3) * invP12_modP3) mod P3
+            uint64_t x1P1t2 = ((uint64_t)x1 + (uint64_t)P1 * t2) % P3;
+            int64_t t_ = (int64_t)x3 - (int64_t)x1P1t2;
+            if (t_ < 0) t_ += P3;
+            uint64_t t3 = (uint64_t)(t_ % P3) * invP12_modP3 % P3;
+
+            // итог: X = x1 + P1*t2 + P1*P2*t3
+            uint64_t part1 = (uint64_t)x1;
+            uint64_t part2 = (uint64_t)P1 * t2;
+            uint64_t part3 = (uint64_t)P1 * P2 % (uint64_t)ULLONG_MAX * t3; 
+            // (поскольку part3 может быть очень большим, но реально мы собираем всё в 64-битный под)
+            uint64_t X = part1 + part2 + part3;
+            res[i] = X;
+        }
+        return res;
+    }
+}
+
+big_int big_int::schonhage_strassen(const big_int& a, const big_int& b)
+{
+    // 1) Переведём вектора 32-битных слов (_digits) в base = 2^16 (низкая и высокая половина):
+    size_t na = a._digits.size();
+    size_t nb = b._digits.size();
+
+    // Разрежем каждое 32-битное слово на две 16-битные "цифры".
+    std::vector<uint32_t> A; A.reserve(na * 2);
+    std::vector<uint32_t> Bv; Bv.reserve(nb * 2);
+    for (size_t i = 0; i < na; i++) {
+        uint32_t low  =  a._digits[i] & 0xFFFF;
+        uint32_t high = (a._digits[i] >> 16) & 0xFFFF;
+        A.push_back(low);
+        A.push_back(high);
+    }
+    for (size_t i = 0; i < nb; i++) {
+        uint32_t low  =  b._digits[i] & 0xFFFF;
+        uint32_t high = (b._digits[i] >> 16) & 0xFFFF;
+        Bv.push_back(low);
+        Bv.push_back(high);
+    }
+
+    // 2) Тройная свёртка NTT
+    auto c1 = convolution_mod(A, Bv, P1, G1);
+    auto c2 = convolution_mod(A, Bv, P2, G2);
+    auto c3 = convolution_mod(A, Bv, P3, G3);
+
+    // 3) CRT → собираем полные 64-битные значения свёртки
+    std::vector<uint64_t> C = crt_three(c1, c2, c3);
+
+    // 4) Выполняем переносы (carry) по base = 2^16, чтобы получить массив «цифр» в base 2^16:
+    size_t nc = C.size();
+    std::vector<uint64_t> tmp(nc + 1, 0);
+    uint64_t carry = 0;
+    for (size_t i = 0; i < nc; i++) {
+        uint64_t cur = C[i] + carry;
+        tmp[i] = cur & 0xFFFFULL;       // lower 16 bits
+        carry = cur >> 16;              // старшие биты в перенос
+    }
+    tmp[nc] = carry;
+
+    // 5) Собираем 32-битные слова из двух 16-битных друг за другом:
+    std::vector<unsigned int, pp_allocator<unsigned int>> result_digits;
+    result_digits.reserve((nc + 1) / 2 + 1);
+    for (size_t i = 0; i + 1 < tmp.size(); i += 2) {
+        uint32_t low16  = static_cast<uint32_t>(tmp[i]);
+        uint32_t high16 = static_cast<uint32_t>(tmp[i + 1]);
+        uint32_t word32 = (high16 << 16) | low16;
+        result_digits.push_back(word32);
+    }
+    // Если осталось «високое» 16-битное слово без пары:
+    if (tmp.size() % 2 == 1) {
+        uint32_t last16 = static_cast<uint32_t>(tmp.back());
+        result_digits.push_back(last16);
+    }
+
+    // 6) Сформируем результат big_int:
+    big_int res(std::move(result_digits), /*sign=*/true);
     res.optimise();
     return res;
 }
