@@ -705,19 +705,26 @@ namespace __detail {
 
         node_BST* to_del = *link;
         node_color del_color = static_cast<node_RB*>(to_del)->color;
+        node_BST* start_balance, *start_balance_pr;
         
         if ((to_del->left_subtree == nullptr) && (to_del->right_subtree == nullptr)) {
             *link = nullptr;
+            start_balance = nullptr;
+            start_balance_pr = to_del->parent;
         } 
         else if ((to_del->left_subtree == nullptr) && (to_del->right_subtree != nullptr)) {
 
             *link = to_del->right_subtree;
             to_del->right_subtree->parent = to_del->parent;
+            start_balance = to_del->right_subtree;
+            start_balance_pr = to_del->parent;
         } 
         else if ((to_del->left_subtree != nullptr) && (to_del->right_subtree == nullptr)) {
 
             *link = to_del->left_subtree;
             to_del->left_subtree->parent = to_del->parent;
+            start_balance = to_del->left_subtree;
+            start_balance_pr = to_del->parent;
         } else {
 
             node_BST* to_swap = to_del->left_subtree;
@@ -729,6 +736,10 @@ namespace __detail {
                 to_swap->right_subtree = to_del->right_subtree;
                 to_del->right_subtree->parent = to_swap;
                 to_del->parent = to_swap;
+                std::swap(static_cast<node_RB*>(to_swap)->color,
+                          static_cast<node_RB*>(to_del)->color);
+                start_balance = to_swap->left_subtree;
+                start_balance_pr = to_swap;
             } else {
 
                 while (to_swap->right_subtree != nullptr) {
@@ -750,6 +761,9 @@ namespace __detail {
         
                 to_swap->left_subtree->parent = to_swap;
                 to_swap->right_subtree->parent = to_swap;
+
+                start_balance = to_swap->left_subtree;
+                start_balance_pr = to_swap;
             }
         }
         // std::cout << "h1\n";
@@ -758,8 +772,8 @@ namespace __detail {
             return;
         }
 
-        node_RB* cur = static_cast<node_RB*>(*link);
-        node_RB* pr = static_cast<node_RB*>(to_del->parent);
+        node_RB* cur = static_cast<node_RB*>(start_balance);
+        node_RB* pr = static_cast<node_RB*>(start_balance_pr);
 
         if (pr == nullptr && cur != nullptr) {
             cur->color = node_color::BLACK;
@@ -795,7 +809,9 @@ namespace __detail {
                     pr->color = node_color::RED;
                     br->color = node_color::BLACK;
                     BST::small_left_rotation(*pr_link);
+                    pr_link = &(br->left_subtree);
                     br = static_cast<node_RB*>(pr->right_subtree);
+
                 }
                 // std::cout << "h41\n";
                 if (br == nullptr) {
@@ -845,6 +861,7 @@ namespace __detail {
                     pr->color = node_color::RED;
                     br->color = node_color::BLACK;
                     BST::small_right_rotation(*pr_link);
+                    pr_link = &(br->right_subtree);
                     br = static_cast<node_RB*>(pr->left_subtree);
                 }
                 // std::cout << "h42\n";

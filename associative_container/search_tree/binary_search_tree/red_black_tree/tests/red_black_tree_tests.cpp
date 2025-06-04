@@ -572,7 +572,7 @@ TEST(redBlackTreePositiveTests, test17)
 	std::map<int, int> map;
 
 	//size_t iterations = 100'000;
-    size_t iterations = 100;
+    size_t iterations = 100000;
 
 	srand(time(nullptr));
 
@@ -590,9 +590,15 @@ TEST(redBlackTreePositiveTests, test17)
 
 					if (map.find(tmp) == map.end())
 					{
-                        // std::cout << "insert: " << tmp << std::endl;
+                        // std::cout << "\ninsert: " << tmp << std::endl << std::endl;
 						map.insert(std::make_pair(tmp, 1));
 						tree.emplace(tmp, 1);
+                        // for (auto it = tree.begin(); it != tree.end(); it++) {
+                        //     for (int i = 0; i < it.depth(); i++) {
+                        //         std::cout << "    ";
+                        //     }
+                        //     std::cout << (*it).first <<((it.get_color() == red_black_tree<int, int>::node_color::RED) ? " R\n" : " B\n");
+                        // }
                         // std::cout << "  end\n";
 					}
 				} catch (std::logic_error& er) {
@@ -607,8 +613,14 @@ TEST(redBlackTreePositiveTests, test17)
 					auto it = map.begin();
 
 					//std::advance(it, rand() % map.size());
-                    // std::cout << "erase: " << it->first << std::endl;
+                    // std::cout << "\nerase: " << it->first << std::endl << std::endl;
 					tree.erase(it->first);
+                    // for (auto it = tree.begin(); it != tree.end(); it++) {
+                    //     for (int i = 0; i < it.depth(); i++) {
+                    //         std::cout << "    ";
+                    //     }
+                    //     std::cout << (*it).first <<((it.get_color() == red_black_tree<int, int>::node_color::RED) ? " R\n" : " B\n");
+                    // }
 					map.erase(it);
                     // std::cout << "  end\n";
 				} else {
@@ -618,6 +630,16 @@ TEST(redBlackTreePositiveTests, test17)
 				break;
 		}
 	}
+
+    // std::cout << "\nfinal\n";
+
+    // for (auto it = tree.begin(); it != tree.end(); it++) {
+    //     for (int i = 0; i < it.depth(); i++) {
+    //         std::cout << "    ";
+    //     }
+    //     std::cout << (*it).first <<((it.get_color() == red_black_tree<int, int>::node_color::RED) ? " R\n" : " B\n");
+    // }
+    
 
 	while(!map.empty())
 	{
