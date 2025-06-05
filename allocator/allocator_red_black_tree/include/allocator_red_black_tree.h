@@ -27,21 +27,55 @@ private:
         block_color color : 4;
     };
 
+    struct block_metadata {
+        block_data data;
+        block_metadata* back;
+        block_metadata* front;
+    };
+
+    struct free_block_metadata : public block_metadata {
+        free_block_metadata* left;
+        free_block_metadata* right;
+        free_block_metadata* parent;
+    }
+
+    struct occ_block_metadata : public block_metadata {
+        void* parent;
+    }
+
+    struct global_metadata {
+        std::mutex mutex;
+        ::logger* logger;
+        allocator_dbg_helper* parent_allocator;
+        size_t space_size;
+        free_block_metadata* root;
+        allocator_with_fit_mode::fit_mode fit_mode;
+    };
+
     void *_trusted_memory;
 
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(allocator_dbg_helper*) + sizeof(fit_mode) + sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
-    static constexpr const size_t occupied_block_metadata_size = sizeof(block_data) + 3 * sizeof(void*);
-    static constexpr const size_t free_block_metadata_size = sizeof(block_data) + 5 * sizeof(void*);
+    static constexpr const size_t allocator_metadata_size = sizeof(global_metadata);
+    static constexpr const size_t occupied_block_metadata_size = sizeof(occ_block_metadata);
+    static constexpr const size_t free_block_metadata_size = sizeof(free_block_metadata);
+
+    void insert_block(free_block_metadata* block);
+    void erase_block(free_block_metadata* block);
+    bool compare_size(free_block_metadata* lhs, free_block_metadata* rhs)
+
+    size_t block_size(block_metadata* block);
+
+    void* place_in(free_block_metadata* block, size_t size);
+
 
 public:
     
     ~allocator_red_black_tree() override;
     
     allocator_red_black_tree(
-        allocator_red_black_tree const &other);
+        allocator_red_black_tree const &other) = delete;
     
     allocator_red_black_tree &operator=(
-        allocator_red_black_tree const &other);
+        allocator_red_black_tree const &other) = delete;
     
     allocator_red_black_tree(
         allocator_red_black_tree &&other) noexcept;

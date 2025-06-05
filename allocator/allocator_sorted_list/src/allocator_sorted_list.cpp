@@ -54,7 +54,7 @@ allocator_sorted_list::allocator_sorted_list(
     catch (const std::bad_alloc &) {
         if (logger)
             logger->error("allocator_sorted_list::allocator_sorted_list - std::bad_alloc thrown");
-        throw "bad alloc";
+        throw;
     }
 
     global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
@@ -111,13 +111,12 @@ allocator_sorted_list::allocator_sorted_list(
 
             block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
             block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block);
-            block_metadata** best_ptr = nullptr;
-            size_t best_size = 0;
+
             while ((cur != nullptr) && (cur->ptr != nullptr)) {
                 cur_ptr = reinterpret_cast<block_metadata**>(&(cur->ptr));
                 cur = reinterpret_cast<block_metadata*>(cur->ptr);
             }
-            if (cur == nullptr) {
+            if ((cur == nullptr) || (cur->block_size < need_size)) {
                 throw std::bad_alloc();
             }
             //if (meta->logger) meta->logger->debug("place in");
@@ -303,13 +302,11 @@ std::vector<allocator_test_utils::block_info> allocator_sorted_list::get_blocks_
     block_metadata* cur = reinterpret_cast<block_metadata*>(
         reinterpret_cast<char*>(_trusted_memory) + allocator_metadata_size
     );
-    bool flag = true;
     while (total < meta->space_size) {
         total += cur->block_size;
         if (cur->ptr == _trusted_memory) {
             blocks.push_back({cur->block_size, true});
         } else {
-            flag = false;
             blocks.push_back({cur->block_size, false});
         }
         cur = reinterpret_cast<block_metadata*>(reinterpret_cast<char*>(cur) + cur->block_size);
