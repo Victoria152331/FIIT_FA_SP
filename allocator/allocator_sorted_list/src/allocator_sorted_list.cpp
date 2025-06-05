@@ -92,7 +92,9 @@ allocator_sorted_list::allocator_sorted_list(
     meta->mutex.lock();
 
     try {
-        if (meta->fit_mode == fit_mode::first_fit) {
+        if (meta->fit_mode == fit_mode::first_fit
+                || meta->fit_mode == fit_mode::the_best_fit) {
+            
             block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
             block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block);
             while ((cur != nullptr) && (cur->block_size < need_size)) {
@@ -105,44 +107,21 @@ allocator_sorted_list::allocator_sorted_list(
             // if (meta->logger) meta->logger->debug("place in");
             res = place_in(cur_ptr, size);
 
-        } else if (meta->fit_mode == fit_mode::the_best_fit) {
-            block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
-            block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block);
-            block_metadata** best_ptr = nullptr;
-            size_t best_size = 0;
-            while (cur != nullptr) {
-                if ((cur->block_size >= need_size) &&
-                        ((best_size == 0) || (cur->block_size < best_size))) {
-                    best_ptr = cur_ptr;
-                    best_size = cur->block_size;
-                }
-                cur_ptr = reinterpret_cast<block_metadata**>(&(cur->ptr));
-                cur = reinterpret_cast<block_metadata*>(cur->ptr);
-            }
-            if (best_ptr == nullptr) {
-                throw std::bad_alloc();
-            }
-            // if (meta->logger) meta->logger->debug("place in");
-            res = place_in(best_ptr, size);
         } else if (meta->fit_mode == fit_mode::the_worst_fit) {
+
             block_metadata** cur_ptr = reinterpret_cast<block_metadata**>(&(meta->first_block));;
             block_metadata* cur = reinterpret_cast<block_metadata*>(meta->first_block);
             block_metadata** best_ptr = nullptr;
             size_t best_size = 0;
-            while (cur != nullptr) {
-                if ((cur->block_size >= need_size) &&
-                        (cur->block_size > best_size)) {
-                    best_ptr = cur_ptr;
-                    best_size = cur->block_size;
-                }
+            while ((cur != nullptr) && (cur->ptr != nullptr)) {
                 cur_ptr = reinterpret_cast<block_metadata**>(&(cur->ptr));
                 cur = reinterpret_cast<block_metadata*>(cur->ptr);
             }
-            if (best_ptr == nullptr) {
+            if (cur == nullptr) {
                 throw std::bad_alloc();
             }
             //if (meta->logger) meta->logger->debug("place in");
-            res = place_in(best_ptr, size);
+            res = place_in(cur_ptr, size);
         }
     }
     catch (const std::bad_alloc &) {
@@ -166,6 +145,9 @@ allocator_sorted_list::allocator_sorted_list(
 }
 
 void* allocator_sorted_list::place_in(block_metadata** block, size_t size) {
+    if (*block == nullptr) {
+        throw std::bad_alloc();
+    }
     global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
     block_metadata* new_occ_block = *block;
     if ((*block)->block_size <= size + 2 * block_metadata_size) {
