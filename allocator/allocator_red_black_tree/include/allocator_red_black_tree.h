@@ -61,6 +61,10 @@ private:
 
     void insert_block(free_block_metadata* block);
     void erase_block(free_block_metadata* block);
+
+    void small_left_rotation(free_block_metadata *&subtree_root);
+    void small_right_rotation(free_block_metadata *&subtree_root);
+
     bool compare_size(free_block_metadata* lhs, free_block_metadata* rhs);
 
     size_t block_size(block_metadata* block) const;

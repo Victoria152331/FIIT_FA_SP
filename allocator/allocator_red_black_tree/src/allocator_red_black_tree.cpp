@@ -304,6 +304,81 @@ void allocator_red_black_tree::insert_block(free_block_metadata* block)
     block->data.color = block_color::RED;
 
     // balance
+
+    cur = block;
+
+    if (block->parent == nullptr) {
+        cur->data.color = block_color::BLACK;
+        return;
+    }
+
+    free_block_metadata* pr = cur->parent;
+    free_block_metadata *un, *gr;
+
+    // std::cout << "h1\n";
+
+    while (pr->data.color == block_color::RED) {
+        // std::cout << "h2\n";
+        gr = pr->parent;
+        free_block_metadata** link_gr = nullptr;
+        if (gr->parent == nullptr) {
+            link_gr = &(meta->root);
+        } else if (gr->parent->left == gr) {
+            link_gr = &(gr->parent->left);
+        } else {
+            link_gr = &(gr->parent->right);
+        }
+
+        if (gr->left == pr) {
+            // std::cout << "h31\n";
+            un = gr->right;
+            if (un == nullptr || un->data.color == block_color::BLACK) {
+                // std::cout << "h411\n";
+                if (cur == pr->right) {
+                    small_left_rotation(gr->left);
+                    std::swap(cur, pr);
+                }
+                pr->data.color = block_color::BLACK;
+                gr->data.color = block_color::RED;
+                small_right_rotation(*link_gr);
+            } else {
+                // std::cout << "h412\n";
+                pr->data.color = block_color::BLACK;
+                gr->data.color = block_color::RED;
+                un->data.color = block_color::BLACK;
+                cur = gr;
+                if (cur->parent == nullptr) {
+                    cur->data.color = block_color::BLACK;
+                    return;
+                }
+                pr = cur->parent;
+            }
+        } else {
+            // std::cout << "h32\n";
+            un = gr->left;
+            if (un == nullptr || un->data.color == block_color::BLACK) {
+                // std::cout << "h421\n";
+                if (cur == pr->left) {
+                    small_right_rotation(gr->right);
+                    std::swap(cur, pr);
+                }
+                pr->data.color = block_color::BLACK;
+                gr->data.color = block_color::RED;
+                small_left_rotation(*link_gr);
+            } else {
+                // std::cout << "h422\n";
+                pr->data.color = block_color::BLACK;
+                gr->data.color = block_color::RED;
+                un->data.color = block_color::BLACK;
+                cur = gr;
+                if (cur->parent == nullptr) {
+                    cur->data.color = block_color::BLACK;
+                    return;
+                }
+                pr = cur->parent;
+            }
+        }
+    }
 }
 
 void allocator_red_black_tree::erase_block(free_block_metadata* block)
@@ -311,6 +386,8 @@ void allocator_red_black_tree::erase_block(free_block_metadata* block)
     global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
     free_block_metadata** link;
     free_block_metadata *start_balance, *start_balance_pr;
+    block_color del_color = block->data.color;
+
     if (block->parent == nullptr) {
         link = &(meta->root);
     } else if (block->parent->left == block) {
@@ -373,9 +450,186 @@ void allocator_red_black_tree::erase_block(free_block_metadata* block)
             start_balance_pr = to_swap;
         }
     }
+
+    if (del_color == block_color::RED) {
+        return;
+    }
+
+    free_block_metadata* cur = (start_balance);
+    free_block_metadata* pr = (start_balance_pr);
+
+    if (pr == nullptr && cur != nullptr) {
+        cur->data.color = block_color::BLACK;
+    }
+
+    free_block_metadata *br, *br_left, *br_right;
+    free_block_metadata** pr_link;
+
+    while (pr != nullptr) {
+        // std::cout << "h2\n";
+        if (pr->parent == nullptr) {
+            pr_link = &(meta->root);
+        } else if (pr->parent->left == pr) {
+            pr_link = &(pr->parent->left);
+        } else {
+            pr_link = &(pr->parent->right);
+        }
+
+        if ((cur != nullptr) && (cur->data.color == block_color::RED)) {
+            // std::cout << "h21\n";
+            cur->data.color = block_color::BLACK;
+            break;
+        }
+
+        if (pr->left == (cur)) {
+            // std::cout << "h31\n";
+            br = (pr->right);
+            if (br == nullptr) {
+                break; // invalid situation
+            }
+            if (br->data.color == block_color::RED) {
+                // std::cout << "h311\n";
+                pr->data.color = block_color::RED;
+                br->data.color = block_color::BLACK;
+                small_left_rotation(*pr_link);
+                pr_link = &(br->left);
+                br = (pr->right);
+
+            }
+            // std::cout << "h41\n";
+            if (br == nullptr) {
+                br_left = nullptr;
+                br_right = nullptr;
+            } else {
+                br_left = (br->left);
+                br_right = (br->right);
+            }
+            bool left_black = (br_left == nullptr)
+                || (br_left->data.color == block_color::BLACK);
+            bool right_black = (br_right == nullptr)
+                || (br_right->data.color == block_color::BLACK);
+
+            if (left_black && right_black) {
+                // std::cout << "h511\n";
+                if(br) br->data.color = block_color::RED;
+                cur = pr;
+                pr = (cur->parent);
+                if (pr == nullptr) {
+                    cur->data.color = block_color::BLACK;
+                }
+            } else {
+                // std::cout << "h512\n";
+                if (right_black) {
+                    br->data.color = block_color::RED;
+                    br_left->data.color = block_color::BLACK;
+                    small_right_rotation(pr->right);
+                    br = (pr->right);
+                    br_left = (br->left);
+                    br_right = (br->right);
+                }
+                br->data.color = pr->data.color;
+                pr->data.color = block_color::BLACK;
+                br_right->data.color = block_color::BLACK;
+                small_left_rotation(*pr_link);
+                break;
+            }
+        } else {
+            // std::cout << "h32\n";
+            br = (pr->left);
+            if (br == nullptr) {
+                break; // invalid situation
+            }
+            if (br->data.color == block_color::RED) {
+                // std::cout << "h321\n";
+                pr->data.color = block_color::RED;
+                br->data.color = block_color::BLACK;
+                small_right_rotation(*pr_link);
+                pr_link = &(br->right);
+                br = (pr->left);
+            }
+            // std::cout << "h42\n";
+            if (br == nullptr) {
+                br_left = nullptr;
+                br_right = nullptr;
+            } else {
+                br_left = (br->left);
+                br_right = (br->right);
+            }
+            bool left_black = (br_left == nullptr)
+                || (br_left->data.color == block_color::BLACK);
+            bool right_black = (br_right == nullptr)
+                || (br_right->data.color == block_color::BLACK);
+
+            if (left_black && right_black) {
+                // std::cout << "h521\n";
+                if (br) br->data.color = block_color::RED;
+                cur = pr;
+                pr = (cur->parent);
+                if (pr == nullptr) {
+                    cur->data.color = block_color::BLACK;
+                }
+            } else {
+                // std::cout << "h522\n";
+                if (left_black) {
+                    br->data.color = block_color::RED;
+                    br_right->data.color = block_color::BLACK;
+                    small_left_rotation(pr->left);
+                    br = (pr->left);
+                    br_left = (br->left);
+                    br_right = (br->right);
+                }
+                br->data.color = pr->data.color;
+                pr->data.color = block_color::BLACK;
+                br_right->data.color = block_color::BLACK;
+                small_right_rotation(*pr_link);
+                break;
+            }
+        }
+    }
 }
 
+void allocator_red_black_tree::small_left_rotation(free_block_metadata *&subtree_root)
+{
+    if ((subtree_root == nullptr) || (subtree_root->right == nullptr)) {
+        return;
+    }
 
+    free_block_metadata* tmp_root = subtree_root->right;
+
+    subtree_root->right = tmp_root->left;
+
+    if (tmp_root->left) {
+        tmp_root->left->parent = subtree_root;
+    }
+
+    tmp_root->parent = subtree_root->parent;
+
+    subtree_root->parent = tmp_root;
+    tmp_root->left = subtree_root;
+    subtree_root = tmp_root;
+}
+
+void allocator_red_black_tree::small_right_rotation(free_block_metadata *&subtree_root)
+{
+    if ((subtree_root == nullptr) || (subtree_root->left == nullptr)) {
+        return;
+    }
+
+    free_block_metadata* tmp_root = subtree_root->left;
+
+    subtree_root->left = tmp_root->right;
+
+    if (tmp_root->right) {
+    tmp_root->right->parent = subtree_root;
+    }
+
+    tmp_root->parent = subtree_root->parent;
+
+    subtree_root->parent = tmp_root;
+    tmp_root->right = subtree_root;
+
+    subtree_root = tmp_root;
+}
 
 void allocator_red_black_tree::set_fit_mode(allocator_with_fit_mode::fit_mode mode)
 {
