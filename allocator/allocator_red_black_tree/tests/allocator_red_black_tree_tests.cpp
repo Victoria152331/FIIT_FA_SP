@@ -55,7 +55,7 @@ TEST(allocatorRBTPositiveTests, test1)
 													}
 												}));
 
-	std::unique_ptr<smart_mem_resource> alloc(new allocator_red_black_tree(3000, nullptr, logger_instance.get(), allocator_with_fit_mode::fit_mode::first_fit));
+	std::unique_ptr<smart_mem_resource> alloc(new allocator_red_black_tree(4000, nullptr, logger_instance.get(), allocator_with_fit_mode::fit_mode::first_fit));
 
 	auto first_block = reinterpret_cast<int *>(alloc->allocate(sizeof(int) * 250));
 
@@ -103,7 +103,9 @@ TEST(allocatorRBTPositiveTests, test5)
 												}));
 
 
-    std::unique_ptr<smart_mem_resource> allocator(new allocator_red_black_tree(20'000, nullptr, logger_instance.get(), allocator_with_fit_mode::fit_mode::first_fit));
+    //std::unique_ptr<smart_mem_resource> allocator(new allocator_red_black_tree(20'000, nullptr, logger_instance.get(), allocator_with_fit_mode::fit_mode::first_fit));
+    std::unique_ptr<smart_mem_resource> allocator(new allocator_red_black_tree(20'000, nullptr, nullptr, allocator_with_fit_mode::fit_mode::first_fit));
+	
 	int iterations_count = 100000;
 
 	std::list<void *> allocated_blocks;

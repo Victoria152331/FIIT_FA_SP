@@ -7,6 +7,7 @@
 #include <logger_guardant.h>
 #include <typename_holder.h>
 #include <mutex>
+#include <sstream>
 
 class allocator_red_black_tree final:
     public smart_mem_resource,
@@ -37,16 +38,16 @@ private:
         free_block_metadata* left;
         free_block_metadata* right;
         free_block_metadata* parent;
-    }
+    };
 
     struct occ_block_metadata : public block_metadata {
         void* parent;
-    }
+    };
 
     struct global_metadata {
         std::mutex mutex;
         ::logger* logger;
-        allocator_dbg_helper* parent_allocator;
+        memory_resource* parent_allocator;
         size_t space_size;
         free_block_metadata* root;
         allocator_with_fit_mode::fit_mode fit_mode;
@@ -60,11 +61,13 @@ private:
 
     void insert_block(free_block_metadata* block);
     void erase_block(free_block_metadata* block);
-    bool compare_size(free_block_metadata* lhs, free_block_metadata* rhs)
+    bool compare_size(free_block_metadata* lhs, free_block_metadata* rhs);
 
-    size_t block_size(block_metadata* block);
+    size_t block_size(block_metadata* block) const;
 
     void* place_in(free_block_metadata* block, size_t size);
+
+    std::pair<std::string, size_t> format_blocks_info();
 
 
 public:

@@ -72,7 +72,7 @@ allocator_red_black_tree::allocator_red_black_tree(
     block->left = nullptr;
     block->right = nullptr;
     block->parent = nullptr;
-    meta->root = reinterpret_cast<void*>(block);
+    meta->root = block;
 
     if (meta->logger) {
         meta->logger->debug("allocator_red_black_tree::allocator_red_black_tree - constructor end");
@@ -92,7 +92,7 @@ bool allocator_red_black_tree::do_is_equal(const std::pmr::memory_resource &othe
     
 }
 
-size_t allocator_red_black_tree::block_size(block_metadata* block)
+size_t allocator_red_black_tree::block_size(block_metadata* block) const
 {
     global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
     size_t _size;
@@ -130,7 +130,7 @@ size_t allocator_red_black_tree::block_size(block_metadata* block)
                 throw std::bad_alloc();
             }
 
-            res = place_in(cur);
+            res = place_in(cur, size);
         } else if (meta->fit_mode == fit_mode::the_best_fit) {
             free_block_metadata* cur = meta->root;
             size_t cur_size, left_size;
@@ -140,7 +140,7 @@ size_t allocator_red_black_tree::block_size(block_metadata* block)
                 if (cur_size < need_size) {
                     cur = cur->right;
                 } else if (left_size >= need_size) {
-                    cur = cur->left
+                    cur = cur->left;
                 } else {
                     break;
                 }
@@ -149,18 +149,18 @@ size_t allocator_red_black_tree::block_size(block_metadata* block)
                 throw std::bad_alloc();
             }
 
-            res = place_in(cur);
+            res = place_in(cur, size);
         } else {
             free_block_metadata* cur = meta->root;
             while ((cur != nullptr) && (cur->right != nullptr)) {
                 cur = cur->right;
             }
 
-            if ((cur == nullptr) || (cur->block_size < need_size)) {
+            if ((cur == nullptr) || (block_size(static_cast<block_metadata*>(cur)) < need_size)) {
                 throw std::bad_alloc();
             }
 
-            res = place_in(cur);
+            res = place_in(cur, size);
         }
     }
     catch (const std::bad_alloc &) {
@@ -185,7 +185,7 @@ void* allocator_red_black_tree::place_in(free_block_metadata* block, size_t size
     global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
     free_block_metadata old_block = *block;
     occ_block_metadata* new_occ = reinterpret_cast<occ_block_metadata*>(block);
-    new_occ.data.occupied = true;
+    new_occ->data.occupied = true;
     new_occ->back = old_block.back;
     new_occ->front = old_block.front;
     new_occ->parent =  _trusted_memory;
@@ -222,19 +222,29 @@ void allocator_red_black_tree::do_deallocate_sm(
             meta->mutex.unlock();
             throw std::runtime_error("do_deallocate_sm - invalid block");
         }
+
+        occ_block_metadata old_block = *block_to_free;
+        free_block_metadata* to_insert = reinterpret_cast<free_block_metadata*>(block_to_free);
+        to_insert->front = old_block.front;
+        to_insert->back = old_block.back;
+        to_insert->left = nullptr;
+        to_insert->right = nullptr;
+        to_insert->parent = nullptr;
+        to_insert->data.occupied = false;
+        to_insert->data.color = block_color::RED;
         
-        if (block_to_free->back != nullptr && !block_to_free->back->data.occupied) {
-            erase_block(static_cast<free_block_metadata*>(block_to_free->back));
-            block_to_free->back->front = block_to_free->front;
-            if (block_to_free->front) block_to_free->front->back = block_to_free->back;
-            block_to_free = block_to_free->back;
+        if (to_insert->back != nullptr && !to_insert->back->data.occupied) {
+            erase_block(static_cast<free_block_metadata*>(to_insert->back));
+            to_insert->back->front = to_insert->front;
+            if (to_insert->front) to_insert->front->back = to_insert->back;
+            to_insert = static_cast<free_block_metadata*>(to_insert->back);
         }
-        if (block_to_free->front != nullptr && !block_to_free->front->data.occupied) {
-            erase_block(static_cast<free_block_metadata*>(block_to_free->front));
-            block_to_free->front = block_to_free->front->front;
-            if (block_to_free->front) block_to_free->front->back = block_to_free;
+        if (to_insert->front != nullptr && !to_insert->front->data.occupied) {
+            erase_block(static_cast<free_block_metadata*>(to_insert->front));
+            to_insert->front = to_insert->front->front;
+            if (to_insert->front) to_insert->front->back = to_insert;
         }
-        insert_block(static_cast<free_block_metadata*>(block_to_free));
+        insert_block(to_insert);
     } 
     catch (...) {
         meta->mutex.unlock();
@@ -298,7 +308,71 @@ void allocator_red_black_tree::insert_block(free_block_metadata* block)
 
 void allocator_red_black_tree::erase_block(free_block_metadata* block)
 {
+    global_metadata* meta = reinterpret_cast<global_metadata*>(_trusted_memory);
+    free_block_metadata** link;
+    free_block_metadata *start_balance, *start_balance_pr;
+    if (block->parent == nullptr) {
+        link = &(meta->root);
+    } else if (block->parent->left == block) {
+        link = &(block->parent->left);
+    } else {
+        link = &(block->parent->right);
+    }
+    if ((block->left == nullptr) && (block->right == nullptr)) {
+        *link = nullptr;
+        start_balance = nullptr;
+        start_balance_pr = block->parent;
+    } 
+    else if ((block->left == nullptr) && (block->right != nullptr)) {
+
+        *link = block->right;
+        block->right->parent = block->parent;
+        start_balance = block->right;
+        start_balance_pr = block->parent;
+    } 
+    else if ((block->left != nullptr) && (block->right == nullptr)) {
+
+        *link = block->left;
+        block->left->parent = block->parent;
+        start_balance = block->left;
+        start_balance_pr = block->parent;
+    } else {
+
+        free_block_metadata* to_swap = block->left;
+
+        if (to_swap->right == nullptr) {
+            to_swap->parent = block->parent;
+            *link = to_swap;
+            to_swap->right = block->right;
+            block->right->parent = to_swap;
+            block->parent = to_swap;
+            std::swap(to_swap->data, block->data);
+            start_balance = to_swap->left;
+            start_balance_pr = to_swap;
+        } else {
+
+            while (to_swap->right != nullptr) {
+                to_swap = to_swap->right;
+            }
+            to_swap->parent->right = to_swap->left;
+            if (to_swap->left) {
+                to_swap->left->parent = to_swap->parent;
+            }
     
+            std::swap(to_swap->left, block->left);
+            std::swap(to_swap->right, block->right);
+            std::swap(to_swap->parent, block->parent);
+            std::swap(to_swap->data, block->data);
+    
+            *link = to_swap;
+    
+            to_swap->left->parent = to_swap;
+            to_swap->right->parent = to_swap;
+
+            start_balance = to_swap->left;
+            start_balance_pr = to_swap;
+        }
+    }
 }
 
 
